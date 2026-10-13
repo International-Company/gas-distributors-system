@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ألوان النظام: أبيض وأزرق هادئ. كل الألوان رموز يعاد تعريفها في الوضع الداكن. */
+:root {
+  --bg: #f5f8fc;
+  --surface: #ffffff;
+  --surface-2: #eef3fa;
+  --border: #dbe3ee;
+  --text: #16243a;
+  --muted: #5b6b82;
+  --primary: #1e5aa8;
+  --primary-hover: #174a8c;
+  --primary-soft: #e3edf9;
+  --primary-contrast: #ffffff;
+  --success: #1f7a4d;
+  --success-soft: #e2f4ea;
+  --warning: #9a6200;
+  --warning-soft: #fdf1dc;
+  --danger: #b42318;
+  --danger-soft: #fde8e6;
+  --ring: #6f9fdc;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0d1522;
+  --surface: #142033;
+  --surface-2: #1a2940;
+  --border: #263a57;
+  --text: #e4ecf7;
+  --muted: #94a6bf;
+  --primary: #5d9be6;
+  --primary-hover: #7aaeee;
+  --primary-soft: #1b3150;
+  --primary-contrast: #0b1424;
+  --success: #5cc493;
+  --success-soft: #133326;
+  --warning: #e7b55a;
+  --warning-soft: #33280f;
+  --danger: #f08a80;
+  --danger-soft: #3a1a18;
+  --ring: #5d9be6;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-contrast: var(--primary-contrast);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-arabic), system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* الأرقام والمعرّفات اللاتينية داخل نص عربي */
+.ltr-nums {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+dialog::backdrop {
+  background: rgb(10 20 35 / 0.45);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

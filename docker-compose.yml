@@ -1,0 +1,20 @@
+# قاعدة بيانات التطوير المحلي فقط. لا تُستخدم في الإنتاج.
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: gas-db
+    environment:
+      POSTGRES_USER: gas_owner
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:?LOCAL_DB_PASSWORD missing in .env}
+      POSTGRES_DB: gas
+    ports:
+      - "5433:5432"
+    volumes:
+      - gas-db-data:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gas_owner -d gas"]
+      interval: 3s
+      retries: 20
+volumes:
+  gas-db-data:

@@ -1,0 +1,57 @@
+{
+  "name": "gas-distributors-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "نظام إدارة موزّعي الغاز في قطاع غزة",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "node scripts/predeploy.mjs && next start",
+    "start:plain": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy && node scripts/db-roles.mjs",
+    "db:studio": "prisma studio",
+    "admin:create": "tsx scripts/create-admin.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.0.2",
+    "@prisma/client": "^6.19.3",
+    "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
+    "lucide-react": "^0.469.0",
+    "next": "^15.5.27",
+    "next-themes": "^0.4.6",
+    "prisma": "^6.19.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^3.25.76",
+    "@tailwindcss/postcss": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.4",
+    "@types/react-dom": "^19.0.2",
+    "vitest": "^3.2.4"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "esbuild@0.28.2": true,
+    "prisma@6.19.3": true
+  }
+}

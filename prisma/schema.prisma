@@ -1,0 +1,209 @@
+// مخطط قاعدة بيانات نظام إدارة موزّعي الغاز.
+// القيود الحساسة (عزل الصفوف RLS، منع تعديل سجل التدقيق) مكتوبة بـ SQL داخل ملفات الترحيل
+// لأن Prisma لا يعبّر عنها. راجع docs/architecture.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  DISTRIBUTOR
+}
+
+// حالة حساب المستخدم نفسه (تسجيل الدخول). حالة الموزّع التشغيلية في Distributor.status.
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum DistributorStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum SuspensionReason {
+  MANUAL
+  EXPIRED
+}
+
+enum AuthMethod {
+  PASSWORD
+  PIN
+}
+
+model User {
+  id                String     @id @default(uuid()) @db.Uuid
+  username          String     @unique // يخزن بأحرف صغيرة دائمًا
+  passwordHash      String
+  role              UserRole
+  status            UserStatus @default(ACTIVE)
+  displayName       String
+  phone             String?
+  // لمديري النظام فقط
+  isSuperAdmin      Boolean    @default(false)
+  permissions       String[]   @default([])
+  // للموزّع: الحساب التابع له
+  distributorId     String?    @unique @db.Uuid
+  distributor       Distributor? @relation(fields: [distributorId], references: [id])
+  failedLoginCount  Int        @default(0)
+  lockedUntil       DateTime?
+  mustChangePassword Boolean   @default(false)
+  passwordChangedAt DateTime   @default(now())
+  lastLoginAt       DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  sessions   Session[]
+  devicePins DevicePin[]
+
+  @@map("users")
+}
+
+model DistributorCategory {
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String        @unique
+  createdAt    DateTime      @default(now())
+  distributors Distributor[]
+
+  @@map("distributor_categories")
+}
+
+model Distributor {
+  id               String            @id @default(uuid()) @db.Uuid
+  name             String
+  phone            String
+  region           String
+  status           DistributorStatus @default(ACTIVE)
+  suspensionReason SuspensionReason?
+  statusChangedAt  DateTime          @default(now())
+  isTrial          Boolean           @default(false)
+  // null = بلا مدة محددة
+  expiresAt        DateTime?
+  isPinned         Boolean           @default(false)
+  categoryId       String?           @db.Uuid
+  category         DistributorCategory? @relation(fields: [categoryId], references: [id])
+  archivedAt       DateTime?
+  createdById      String?           @db.Uuid
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  user User?
+
+  @@index([status])
+  @@index([expiresAt])
+  @@map("distributors")
+}
+
+model Session {
+  id                 String     @id @default(uuid()) @db.Uuid
+  tokenHash          String     @unique
+  userId             String     @db.Uuid
+  user               User       @relation(fields: [userId], references: [id])
+  authMethod         AuthMethod
+  // آخر تحقق بكلمة المرور، يُستخدم للعمليات الحساسة
+  passwordVerifiedAt DateTime?
+  createdAt          DateTime   @default(now())
+  lastActivityAt     DateTime   @default(now())
+  expiresAt          DateTime
+  ip                 String?
+  userAgent          String?
+  revokedAt          DateTime?
+  revokeReason       String?
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// PIN مرتبط بجهاز واحد عبر رمز جهاز طويل الأجل مخزّن في ملف تعريف ارتباط محمي.
+model DevicePin {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @db.Uuid
+  user            User      @relation(fields: [userId], references: [id])
+  deviceTokenHash String    @unique
+  pinHash         String
+  failedCount     Int       @default(0)
+  createdAt       DateTime  @default(now())
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+
+  @@index([userId])
+  @@map("device_pins")
+}
+
+model LoginAttempt {
+  id        BigInt     @id @default(autoincrement())
+  username  String
+  userId    String?    @db.Uuid
+  success   Boolean
+  reason    String?
+  method    AuthMethod
+  ip        String?
+  userAgent String?
+  createdAt DateTime   @default(now())
+
+  @@index([username, createdAt])
+  @@index([ip, createdAt])
+  @@index([createdAt])
+  @@map("login_attempts")
+}
+
+// سجل تدقيق للإضافة فقط: trigger في قاعدة البيانات يمنع التعديل والحذف.
+model AuditLog {
+  id            BigInt   @id @default(autoincrement())
+  at            DateTime @default(now())
+  actorUserId   String?  @db.Uuid
+  actorRole     String?
+  distributorId String?  @db.Uuid
+  action        String
+  entityType    String
+  entityId      String?
+  before        Json?
+  after         Json?
+  reason        String?
+  ip            String?
+
+  @@index([at])
+  @@index([distributorId, at])
+  @@index([actorUserId, at])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// صف واحد فقط (id = 1).
+model SystemSettings {
+  id                 Int      @id @default(1)
+  systemName         String   @default("نظام إدارة موزّعي الغاز")
+  contactPhone       String?
+  contactEmail       String?
+  contactAddress     String?
+  currencyCode       String   @default("ILS")
+  currencySymbol     String   @default("₪")
+  sessionIdleMinutes Int      @default(30)
+  maxFailedLogins    Int      @default(5)
+  lockoutMinutes     Int      @default(15)
+  updatedAt          DateTime @updatedAt
+  updatedById        String?  @db.Uuid
+
+  @@map("system_settings")
+}
+
+model ErrorLog {
+  id        BigInt   @id @default(autoincrement())
+  at        DateTime @default(now())
+  level     String
+  message   String
+  stack     String?
+  route     String?
+  userId    String?  @db.Uuid
+  context   Json?
+
+  @@index([at])
+  @@map("error_logs")
+}
