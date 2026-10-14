@@ -6,6 +6,7 @@ import { Pencil } from "lucide-react";
 import { Alert, Button, Card, Field, Input, Textarea } from "@/components/ui";
 import { Modal } from "@/components/modal";
 import { useApi, useFormSubmit } from "@/components/api-client";
+import { CancelRecordButton, PaymentDialog } from "@/components/payment-dialog";
 
 export function CitizenActions({ citizenId, archived }: { citizenId: string; archived: boolean }) {
   const api = useApi();
@@ -64,4 +65,34 @@ export function EditEntitlement({ entitlement }: { entitlement: E }) {
       )}
     </>
   );
+}
+
+export function PayButton({ entitlementId, title, remaining }: { entitlementId: string; title: string; remaining: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [msg, setMsg] = useState("");
+  return (
+    <>
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>تحصيل</Button>
+      {msg && <span className="ms-2 text-xs text-success">{msg}</span>}
+      {open && (
+        <PaymentDialog
+          entitlementId={entitlementId}
+          title={title}
+          remaining={remaining}
+          onClose={() => setOpen(false)}
+          onDone={(m) => {
+            setOpen(false);
+            setMsg(m);
+            router.refresh();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+export function CancelPayment({ id }: { id: string }) {
+  const router = useRouter();
+  return <CancelRecordButton url={`/api/v1/payments/${id}/cancel`} onDone={() => router.refresh()} />;
 }

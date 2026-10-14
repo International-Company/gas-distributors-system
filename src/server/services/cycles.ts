@@ -52,6 +52,7 @@ export async function getCycleSummary(actor: Actor, cycleId: string) {
       tx.statement.findMany({ where: { cycleId }, orderBy: { importedAt: "desc" }, select: { id: true, title: true, status: true, version: true, importedAt: true, approvedAt: true } }),
     ]);
     const states = await tx.cylinder.groupBy({ by: ["status"], where: { cycleId, status: { not: "VOID" } }, _count: { _all: true } });
+    const collected = await tx.payment.aggregate({ where: { cycleId, status: "ACTIVE" }, _sum: { amount: true } });
     const n = (s: string) => states.find((x) => x.status === s)?._count._all ?? 0;
     const userIds = [...new Set(cycle.events.map((e) => e.userId))];
     const users = await tx.user.findMany({ where: { id: { in: userIds } }, select: { id: true, displayName: true } });
@@ -66,6 +67,7 @@ export async function getCycleSummary(actor: Actor, cycleId: string) {
       statements,
       pendingStatements: statements.filter((s) => s.status === "PENDING_REVIEW").length,
       cylinderStates: { empty: n("EMPTY"), filled: n("FILLED"), delivered: n("DELIVERED") },
+      collected: collected._sum.amount ?? new Prisma.Decimal(0),
     };
   });
 }

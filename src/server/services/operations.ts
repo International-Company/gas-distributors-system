@@ -9,6 +9,7 @@ import { cleanText, digitsOnly, normalizeDigits } from "@/lib/arabic";
 import { isValidNationalId } from "@/lib/national-id";
 import { recordMovement, reverseMovement } from "./inventory";
 import { isolate } from "@/lib/format";
+import { billableWhere, paidByEntitlement } from "./finance";
 
 // ---------------------------------------------------------------------------
 // أدوات
@@ -313,7 +314,7 @@ export async function counterLookup(actor: Actor, input: unknown) {
     if (citizen?.mergedIntoId) citizen = await tx.citizen.findUnique({ where: { id: citizen.mergedIntoId } });
     if (!citizen) return { found: false as const, nationalId: id };
     const ents = await tx.entitlement.findMany({
-      where: { citizenId: citizen.id, OR: [{ cycle: { status: "OPEN" } }, { cylinders: { some: { status: { in: ["EMPTY", "FILLED"] } } } }] },
+      where: { citizenId: citizen.id },
       include: {
         cycle: { select: { id: true, name: true, status: true } },
         statement: { select: { status: true, title: true } },
@@ -321,11 +322,20 @@ export async function counterLookup(actor: Actor, input: unknown) {
       },
       orderBy: { cycle: { number: "desc" } },
     });
+    const billable = new Set((await tx.entitlement.findMany({ where: { citizenId: citizen.id, ...billableWhere }, select: { id: true } })).map((e) => e.id));
+    const paid = await paidByEntitlement(tx, ents.map((e) => e.id));
+    const balance = (e: (typeof ents)[number]) => {
+      const p = paid.get(e.id) ?? new Prisma.Decimal(0);
+      return { paid: p, remaining: billable.has(e.id) ? e.amountDue.sub(p) : new Prisma.Decimal(0) };
+    };
+    // تُعرض: الدورة النشطة، وأي استحقاق له جرار معلقة، وأي استحقاق عليه مبلغ متبقٍ.
+    const relevant = ents.filter((e) => e.cycle.status === "OPEN" || e.cylinders.some((c) => c.status === "EMPTY" || c.status === "FILLED") || balance(e).remaining.gt(0));
     return {
       found: true as const,
       nationalId: id,
       citizen: { id: citizen.id, fullName: citizen.fullName, phone: citizen.phone },
-      entitlements: ents.map((e) => ({
+      totalRemaining: relevant.reduce((a, e) => a.add(balance(e).remaining), new Prisma.Decimal(0)),
+      entitlements: relevant.map((e) => ({
         id: e.id,
         cycle: e.cycle,
         status: e.status,
@@ -335,6 +345,9 @@ export async function counterLookup(actor: Actor, input: unknown) {
         cylinders: e.cylinders.map((c) => ({ id: c.id, label: c.label, status: c.status })),
         remaining: Math.max(0, e.quantity - e.cylinders.length),
         canReceive: e.status === "ACTIVE" && e.cycle.status === "OPEN" && e.cylinders.length < e.quantity,
+        paid: balance(e).paid,
+        amountRemaining: balance(e).remaining,
+        canPay: billable.has(e.id) && balance(e).remaining.gt(0),
       })),
     };
   });

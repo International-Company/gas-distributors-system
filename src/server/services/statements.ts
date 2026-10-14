@@ -16,6 +16,7 @@ import { detectKind, extractExcel, extractPdf, looksLikeHeader, MAX_STATEMENT_BY
 import { sha256Hex, storeFile } from "./files";
 import { getActiveCycle, lockCycle } from "./cycles";
 import { cylinderCounts } from "./operations";
+import { paidByEntitlement } from "./finance";
 import { isolate } from "@/lib/format";
 
 // ---------------------------------------------------------------------------
@@ -109,11 +110,12 @@ async function revalidate(tx: Tx, st: Statement & { cycle: { unitPrice: Prisma.D
 
   // أثر الإصدار الجديد على الجرار المستلمة فعلًا: رقم المواطن مكتوب على الجرة فلا يتغير،
   // والعدد لا يقل عن المستلم.
-  const prevByNid = new Map<string, { citizenNumber: string; received: number }>();
+  const prevByNid = new Map<string, { citizenNumber: string; received: number; paid: Prisma.Decimal }>();
   if (st.supersedesId) {
     const prev = await tx.entitlement.findMany({ where: { statementId: st.supersedesId, status: "ACTIVE" }, select: { id: true, citizenNumber: true, citizen: { select: { nationalId: true } } } });
     const counts = await cylinderCounts(tx, prev.map((e) => e.id));
-    for (const e of prev) prevByNid.set(e.citizen.nationalId, { citizenNumber: e.citizenNumber, received: counts.get(e.id) ?? 0 });
+    const paid = await paidByEntitlement(tx, prev.map((e) => e.id));
+    for (const e of prev) prevByNid.set(e.citizen.nationalId, { citizenNumber: e.citizenNumber, received: counts.get(e.id) ?? 0, paid: paid.get(e.id) ?? new Prisma.Decimal(0) });
   }
 
   for (const w of included) {
@@ -126,6 +128,9 @@ async function revalidate(tx: Tx, st: Statement & { cycle: { unitPrice: Prisma.D
       if (r.quantity && r.quantity < p.received) {
         w.issues.push({ field: "quantity", code: "QTY_BELOW_RECEIVED", message: `عدد الجرار أقل من المستلم فعلًا (${p.received})`, severity: "ERROR" });
       }
+    }
+    if (p && p.paid.gt(0) && r.quantity && st.cycle && effectiveAmount(r, st.cycle.unitPrice).lt(p.paid)) {
+      w.issues.push({ field: "amount", code: "AMOUNT_BELOW_PAID", message: `المبلغ الجديد أقل من المدفوع فعلًا (${p.paid.toFixed(2)})`, severity: "ERROR" });
     }
     const c = r.nationalId ? citizenByNid.get(r.nationalId) : undefined;
     if (c && r.fullName && normalizeName(c.fullName) !== normalizeName(r.fullName)) {
@@ -400,7 +405,7 @@ export type StatementDiff = {
   added: { nationalId: string; fullName: string; citizenNumber: string; quantity: number; amount: string }[];
   changed: { nationalId: string; fullName: string; changes: Change[] }[];
   // received: جرار مستلمة لهذا الاستحقاق؛ تبقى قابلة للتعبئة والتسليم لصاحبها بعد الإزالة.
-  removed: { nationalId: string; fullName: string; citizenNumber: string; received: number }[];
+  removed: { nationalId: string; fullName: string; citizenNumber: string; received: number; paid: string }[];
   unchanged: number;
 };
 
@@ -434,8 +439,9 @@ async function computeDiff(tx: Tx, st: Statement & { cycle: { unitPrice: Prisma.
   }
   const gone = prev.filter((e) => !seen.has(e.citizen.nationalId));
   const counts = await cylinderCounts(tx, gone.map((e) => e.id));
+  const paidGone = await paidByEntitlement(tx, gone.map((e) => e.id));
   for (const e of gone) {
-    diff.removed.push({ nationalId: e.citizen.nationalId, fullName: e.nameInStatement, citizenNumber: e.citizenNumber, received: counts.get(e.id) ?? 0 });
+    diff.removed.push({ nationalId: e.citizen.nationalId, fullName: e.nameInStatement, citizenNumber: e.citizenNumber, received: counts.get(e.id) ?? 0, paid: (paidGone.get(e.id) ?? new Prisma.Decimal(0)).toFixed(2) });
   }
   return diff;
 }

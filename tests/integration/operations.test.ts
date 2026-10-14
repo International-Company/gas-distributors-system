@@ -207,7 +207,7 @@ describe("الشحنات", () => {
     const { actor, ent } = await setup(rows);
     const cyl = [];
     for (const r of rows) cyl.push((await receiveEmpty(actor, { clientOpId: key(), entitlementId: ent(r.id).id, nationalId: r.id })).cylinder.id);
-    const station = await createStation(actor, { name: `محطة ${randomUUID().slice(0, 4)}` });
+    const station = await createStation(actor, { name: `محطة ${randomUUID().slice(0, 4)}`, defaultUnitPrice: "18" });
     const k = key();
     const body = { clientOpId: k, stationId: station.id, quantity: 5, cylinderIds: cyl.slice(0, 2), reference: "INV-1" };
     const sh = await receiveShipment(actor, body);
@@ -227,7 +227,7 @@ describe("الشحنات", () => {
     const { actor, ent } = await setup(rows);
     const cyl = [];
     for (const r of rows) cyl.push((await receiveEmpty(actor, { clientOpId: key(), entitlementId: ent(r.id).id, nationalId: r.id })).cylinder);
-    const station = await createStation(actor, { name: `محطة ${randomUUID().slice(0, 4)}` });
+    const station = await createStation(actor, { name: `محطة ${randomUUID().slice(0, 4)}`, defaultUnitPrice: "18" });
     const sh = await receiveShipment(actor, { clientOpId: key(), stationId: station.id, quantity: 3, cylinderIds: cyl.map((c) => c.id) });
     await deliverCylinder(actor, { clientOpId: key(), cylinderId: cyl[0].id, cylinderLabel: cyl[0].label, nationalId: rows[0].id });
     await expect(cancelShipment(actor, sh.id, { reason: "خطأ في التسجيل" })).rejects.toMatchObject({ code: "INVALID_STATE" });
@@ -246,7 +246,7 @@ describe("الشحنات", () => {
     const r = one();
     const { actor, ent } = await setup([r]);
     const c = await receiveEmpty(actor, { clientOpId: key(), entitlementId: ent(r.id).id, nationalId: r.id });
-    const station = await createStation(actor, { name: `محطة ${randomUUID().slice(0, 4)}` });
+    const station = await createStation(actor, { name: `محطة ${randomUUID().slice(0, 4)}`, defaultUnitPrice: "18" });
     await expect(receiveShipment(actor, { clientOpId: key(), stationId: station.id, quantity: 0, cylinderIds: [c.cylinder.id] })).rejects.toThrow();
   });
 });

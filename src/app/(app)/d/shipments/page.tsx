@@ -4,7 +4,7 @@ import { listShipments, listStations } from "@/server/services/shipments";
 import { listCylinders } from "@/server/services/operations";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatMoney } from "@/lib/format";
 import { NewShipment } from "./new-shipment";
 
 export const metadata = { title: "الشحنات" };
@@ -21,7 +21,7 @@ export default async function ShipmentsPage({ searchParams }: { searchParams: Pr
     <div className="space-y-6">
       <PageHeader title="شحنات المحطات" description="استلام شحنة معبأة يعبئ جرار المواطنين المختارة، والباقي يُسجل كمية إضافية. الاستلام لا يعني دفع قيمة الشحنة." />
       <NewShipment
-        stations={stations.filter((s) => s.active).map((s) => ({ id: s.id, name: s.name }))}
+        stations={stations.filter((s) => s.active).map((s) => ({ id: s.id, name: s.name, defaultUnitPrice: s.defaultUnitPrice?.toString() ?? "" }))}
         empties={empties.rows.map((c) => ({ id: c.id, label: c.label, name: c.entitlement.nameInStatement, cycleName: c.entitlement.cycle.name }))}
         emptiesTotal={empties.total}
       />
@@ -34,7 +34,7 @@ export default async function ShipmentsPage({ searchParams }: { searchParams: Pr
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
                 <div className="text-sm">
                   <Link href={`/d/shipments/${s.id}`} className="font-semibold text-primary hover:underline">{s.station.name}{s.reference ? ` — ${s.reference}` : ""}</Link>
-                  <div className="text-xs text-muted">{formatDateTime(s.receivedAt)} · {s.quantity} جرة ({s.linkedCount} لمواطنين، {s.extraCount} إضافية)</div>
+                  <div className="text-xs text-muted">{formatDateTime(s.receivedAt)} · {s.quantity} جرة ({s.linkedCount} لمواطنين، {s.extraCount} إضافية) · القيمة {formatMoney(s.unitPrice.mul(s.quantity))}</div>
                 </div>
                 {s.status === "CANCELLED" ? <Badge tone="danger">ملغاة</Badge> : <Badge tone="success">مستلمة</Badge>}
               </li>

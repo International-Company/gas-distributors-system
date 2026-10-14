@@ -13,6 +13,7 @@ import { isValidNationalId } from "@/lib/national-id";
 import { lockCycle } from "./cycles";
 import { isolate } from "@/lib/format";
 import { cylinderCounts } from "./operations";
+import { citizenDues, paidByEntitlement } from "./finance";
 
 function log(tx: Tx, actor: DistributorActor, action: string, entityType: string, entityId: string, after?: unknown, before?: unknown, reason?: string) {
   return audit(tx, actor, { action, entityType, entityId, distributorId: actor.distributorId, after, before, reason });
@@ -131,14 +132,16 @@ export async function getCitizenProfile(actor: Actor, citizenId: string) {
           statement: { select: { id: true, title: true, version: true } },
           changes: { orderBy: { at: "desc" } },
           cylinders: { orderBy: { seq: "asc" }, include: { operations: { orderBy: { at: "asc" } } } },
+          payments: { orderBy: { paidAt: "desc" } },
         },
         orderBy: { cycle: { number: "desc" } },
       }),
       tx.citizen.findMany({ where: { mergedIntoId: citizenId }, select: { id: true, nationalId: true, fullName: true } }),
       c.mergedIntoId ? tx.citizen.findUnique({ where: { id: c.mergedIntoId }, select: { id: true, nationalId: true, fullName: true } }) : null,
     ]);
-    const totalDue = entitlements.filter((e) => e.status === "ACTIVE").reduce((s, e) => s.add(e.amountDue), new Prisma.Decimal(0));
-    const userIds = [...new Set(entitlements.flatMap((e) => [...e.changes.map((x) => x.userId), ...e.cylinders.flatMap((c) => c.operations.map((o) => o.userId))]))];
+    const dues = await citizenDues(tx, citizenId);
+    const totalDue = dues.total.due;
+    const userIds = [...new Set(entitlements.flatMap((e) => [...e.changes.map((x) => x.userId), ...e.payments.map((p) => p.userId), ...e.cylinders.flatMap((c) => c.operations.map((o) => o.userId))]))];
     const users = await tx.user.findMany({ where: { id: { in: userIds } }, select: { id: true, displayName: true } });
     const names = Object.fromEntries(users.map((u) => [u.id, u.displayName]));
     // السجل الزمني: من تغييرات الاستحقاق حاليًا، وتضاف عمليات الجرار والتحصيل في المراحل التالية.
@@ -146,6 +149,13 @@ export async function getCitizenProfile(actor: Actor, citizenId: string) {
       .flatMap((e) => [
         { at: e.createdAt, kind: "ENTITLEMENT_CREATED", cycleName: e.cycle.name, details: { citizenNumber: e.citizenNumber, quantity: e.quantity }, by: null as string | null },
         ...e.changes.map((ch) => ({ at: ch.at, kind: `CHANGE_${ch.source}`, cycleName: e.cycle.name, details: { before: ch.before, after: ch.after, reason: ch.reason }, by: names[ch.userId] ?? null })),
+        ...e.payments.map((p) => ({
+          at: p.paidAt,
+          kind: p.status === "ACTIVE" ? "PAYMENT" : "PAYMENT_CANCELLED",
+          cycleName: e.cycle.name,
+          details: { amount: p.amount.toFixed(2), reason: p.cancelReason },
+          by: names[p.userId] ?? null,
+        })),
         ...e.cylinders.flatMap((c) =>
           c.operations.map((o) => ({
             at: o.at,
@@ -157,7 +167,8 @@ export async function getCitizenProfile(actor: Actor, citizenId: string) {
         ),
       ])
       .sort((a, b) => b.at.getTime() - a.at.getTime());
-    return { citizen: c, entitlements, totalDue, mergedFrom, mergedInto, timeline };
+    const balances = Object.fromEntries([...dues.per].map(([id, x]) => [id, { due: x.due, paid: x.paid, remaining: x.remaining }]));
+    return { citizen: c, entitlements, totalDue, totals: dues.total, balances, mergedFrom, mergedInto, timeline };
   });
 }
 
@@ -196,6 +207,10 @@ export async function editEntitlement(actor: Actor, entitlementId: string, input
     const received = (await cylinderCounts(tx, [e.id])).get(e.id) ?? 0;
     if (received > 0 && v.citizenNumber !== undefined && v.citizenNumber !== e.citizenNumber) {
       throw new AppError("INVALID_STATE", `لا يمكن تغيير رقم المواطن: استُلمت ${received} جرة مكتوب عليها الرقم ${isolate(e.citizenNumber)}`);
+    }
+    if (v.amountDue !== undefined) {
+      const paid = (await paidByEntitlement(tx, [e.id])).get(e.id) ?? new Prisma.Decimal(0);
+      if (new Prisma.Decimal(v.amountDue).lt(paid)) throw new AppError("INVALID_STATE", `لا يمكن جعل المبلغ المطلوب أقل من المدفوع فعلًا (${paid.toFixed(2)})`);
     }
     if (v.quantity !== undefined && v.quantity < received) {
       throw new AppError("INVALID_STATE", `لا يمكن جعل العدد أقل من الجرار المستلمة فعلًا (${received})`);

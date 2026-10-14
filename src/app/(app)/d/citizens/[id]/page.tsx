@@ -3,7 +3,7 @@ import { requirePageActor } from "@/server/http/context";
 import { getCitizenProfile } from "@/server/services/citizens";
 import { Alert, Badge, Card, DetailList, EmptyState, PageHeader } from "@/components/ui";
 import { formatDateTime, formatMoney } from "@/lib/format";
-import { CitizenActions, EditEntitlement } from "./actions";
+import { CancelPayment, CitizenActions, EditEntitlement, PayButton } from "./actions";
 import { CylinderStatusBadge } from "@/components/cylinder-status";
 
 export const metadata = { title: "ملف مواطن" };
@@ -14,6 +14,8 @@ const TIMELINE: Record<string, string> = {
   CHANGE_MANUAL_EDIT: "تعديل يدوي",
   CHANGE_MERGE: "دمج سجل",
   CHANGE_REMOVED: "أُزيل من إصدار جديد للكشف",
+  PAYMENT: "تحصيل",
+  PAYMENT_CANCELLED: "تحصيل (أُلغي)",
   OP_RECEIVE_EMPTY: "استلام جرة فارغة",
   OP_FILL: "تعبئة",
   OP_DELIVER: "تسليم جرة معبأة",
@@ -41,11 +43,12 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
             ["رقم الهوية", <bdi key="n">{c.nationalId}</bdi>],
             ["الهاتف", <bdi key="p">{c.phone ?? "—"}</bdi>],
             ["عدد الدورات", p.entitlements.length],
-            ["إجمالي المطلوب عبر الدورات", formatMoney(p.totalDue)],
+            ["إجمالي المطلوب عبر الدورات", formatMoney(p.totals.due)],
+            ["إجمالي المدفوع", formatMoney(p.totals.paid)],
+            ["إجمالي المتبقي", <strong key="r" className={p.totals.remaining.gt(0) ? "text-warning" : "text-success"}>{formatMoney(p.totals.remaining)}</strong>],
             ...(p.mergedFrom.length ? ([["سجلات مدموجة فيه", p.mergedFrom.map((m) => `${m.fullName} (${m.nationalId})`).join("، ")]] as [string, string][]) : []),
           ]}
         />
-        <p className="mt-3 text-xs text-muted">المدفوع والمتبقي يظهران مع نظام التحصيل (المرحلة 4).</p>
       </Card>
 
       <Card title="الاستحقاقات حسب الدورة">
@@ -53,13 +56,15 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
           <EmptyState>لا توجد استحقاقات.</EmptyState>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
+            <table className="w-full min-w-[1000px] text-sm">
               <thead className="text-right text-xs text-muted">
                 <tr className="border-b border-border">
                   <th className="py-2 font-medium">الدورة</th>
                   <th className="py-2 font-medium">رقم المواطن</th>
                   <th className="py-2 font-medium">الجرار</th>
                   <th className="py-2 font-medium">المطلوب</th>
+                  <th className="py-2 font-medium">المدفوع</th>
+                  <th className="py-2 font-medium">المتبقي</th>
                   <th className="py-2 font-medium">الجرار</th>
                   <th className="py-2 font-medium">الكشف</th>
                   <th className="py-2 font-medium">الحالة</th>
@@ -73,6 +78,13 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
                     <td className="py-2 font-semibold"><bdi>{e.citizenNumber}</bdi></td>
                     <td className="py-2">{e.quantity}</td>
                     <td className="py-2">{formatMoney(e.amountDue)} <span className="text-xs text-muted">{e.amountSource === "AUTHORITY" ? "(من الكشف)" : "(محسوب)"}</span></td>
+                    <td className="py-2">{p.balances[e.id] ? formatMoney(p.balances[e.id].paid) : "—"}</td>
+                    <td className="py-2">
+                      {p.balances[e.id] ? formatMoney(p.balances[e.id].remaining) : "—"}
+                      {p.balances[e.id]?.remaining.gt(0) && !p.citizen.mergedIntoId && (
+                        <div className="mt-1"><PayButton entitlementId={e.id} title={`${p.citizen.fullName} — ${e.cycle.name}`} remaining={p.balances[e.id].remaining.toFixed(2)} /></div>
+                      )}
+                    </td>
                     <td className="py-2">
                       <div className="flex flex-wrap gap-1">
                         {e.cylinders.filter((c) => c.status !== "VOID").map((c) => (
@@ -96,6 +108,25 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
         )}
       </Card>
 
+      <Card title="التحصيلات">
+        {p.entitlements.every((e) => e.payments.length === 0) ? (
+          <EmptyState>لا توجد تحصيلات.</EmptyState>
+        ) : (
+          <ul className="divide-y divide-border text-sm">
+            {p.entitlements.flatMap((e) => e.payments.map((pay) => ({ pay, cycle: e.cycle.name }))).sort((a, b) => b.pay.paidAt.getTime() - a.pay.paidAt.getTime()).map(({ pay, cycle }) => (
+              <li key={pay.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span>
+                  <strong>{formatMoney(pay.amount)}</strong> — {cycle} <span className="text-xs text-muted">· {formatDateTime(pay.paidAt)}</span>
+                  {pay.notes && <span className="text-xs text-muted"> · {pay.notes}</span>}
+                  {pay.status === "CANCELLED" && <div className="text-xs text-danger">أُلغي: {pay.cancelReason}</div>}
+                </span>
+                {pay.status === "ACTIVE" ? <CancelPayment id={pay.id} /> : <Badge tone="danger">ملغى</Badge>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       <Card title="السجل الزمني">
         {p.timeline.length === 0 ? (
           <EmptyState>لا توجد أحداث.</EmptyState>
@@ -107,6 +138,7 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
                   <span className="font-medium">{TIMELINE[t.kind] ?? t.kind} — {t.cycleName}</span>
                   <span className="text-xs text-muted">{formatDateTime(t.at)}{t.by ? ` · ${t.by}` : ""}</span>
                 </div>
+                {"amount" in t.details && t.details.amount ? <div className="mt-1">المبلغ: {formatMoney(String(t.details.amount))}</div> : null}
                 {"reason" in t.details && t.details.reason ? <div className="mt-1 text-muted">السبب: {String(t.details.reason)}</div> : null}
               </li>
             ))}

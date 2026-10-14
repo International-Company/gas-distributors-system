@@ -150,3 +150,28 @@
 | `POST /shipments/:id/cancel` | `{reason}` | إلغاء الشحنة (يُرفض إن سُلّمت إحدى جرارها) |
 | `GET /inventory` | — | الرصيد ومطابقته بحالات الجرار |
 | `GET /inventory/movements` | `?type=&from=&to=&page=` | سجل حركة المخزون |
+
+---
+
+# المرحلة 4: المالية (واجهات الموزّع)
+
+المبالغ نصوص عشرية بمنزلتين (مثل `"15.50"`). كل إنشاء يحمل `clientOpId` لمنع التكرار. السجلات المالية لا تُعدّل ولا تُحذف؛ التصحيح بالإلغاء المسبب ثم سجل جديد.
+
+| الطريقة والمسار | الجسم | الوصف |
+|---|---|---|
+| `POST /payments` | `{clientOpId, entitlementId, full:true}` أو `{…, amount}` + `paidAt?, notes?` | تحصيل كامل المتبقي أو جزئي؛ يُرفض ما يتجاوز المتبقي |
+| `GET /payments` | `?cycleId=&status=&from=&to=&page=` | التحصيلات وإجمالي النافذ |
+| `POST /payments/:id/cancel` | `{reason}` | إلغاء تحصيل (مرة واحدة) |
+| `POST /expenses` | `{clientOpId, amount, description, spentAt?}` | مصروف |
+| `GET /expenses` | `?from=&to=&page=` | المصروفات |
+| `POST /expenses/:id/cancel` | `{reason}` | إلغاء مصروف |
+| `POST /station-payments` | `{clientOpId, stationId, amount, paidAt?, reference?, notes?}` | دفعة لمحطة |
+| `POST /station-payments/:id/cancel` | `{reason}` | إلغاء دفعة محطة |
+| `GET /stations/accounts` | — | قيمة الشحنات والمدفوع والمتبقي لكل محطة |
+| `GET /stations/:id/account` | `?from=&to=` | كشف حساب محطة: رصيد افتتاحي وحركات برصيد جارٍ |
+| `GET /cash-box` | `?from=&to=&cycleId=` | الصندوق: المقبوضات والمصروفات ودفعات المحطات والرصيد المحسوب |
+
+تعديلات على واجهات سابقة:
+- `POST /shipments` يقبل `unitPrice` (سعر شراء الجرة لهذه الشحنة). إن غاب يُستخدم `defaultUnitPrice` للمحطة، وإن لم يوجد تُرفض الشحنة.
+- `POST/PATCH /stations` يقبلان `defaultUnitPrice`.
+- `GET /counter/lookup` يعيد لكل استحقاق `paid` و `amountRemaining` و `canPay`، ويعيد للمواطن `totalRemaining`.

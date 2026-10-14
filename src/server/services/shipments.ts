@@ -6,6 +6,7 @@ import { type Actor, assertDistributor } from "../actor";
 import { audit } from "../audit";
 import { recordMovement, reverseMovement } from "./inventory";
 import { cancelOperationInTx, fillInTx } from "./operations";
+import { getSettings } from "./settings";
 
 // ---------------------------------------------------------------------------
 // المحطات
@@ -15,6 +16,13 @@ const stationSchema = z.object({
   name: z.string().trim().min(2, "اسم المحطة مطلوب").max(100),
   phone: z.string().trim().max(20).optional().nullable().transform((v) => v || null),
   notes: z.string().trim().max(500).optional().nullable().transform((v) => v || null),
+  // سعر شراء الجرة الافتراضي من المحطة (يُقترح عند تسجيل الشحنة).
+  defaultUnitPrice: z
+    .union([z.string(), z.number()])
+    .optional()
+    .nullable()
+    .transform((v) => (v === null || v === undefined || v === "" ? null : String(v).replace(/[٫,]/g, ".")))
+    .refine((v) => v === null || /^\d{1,8}(\.\d{1,2})?$/.test(v), "سعر غير صالح"),
   active: z.boolean().optional(),
 });
 
@@ -29,7 +37,9 @@ export async function createStation(actor: Actor, input: unknown) {
   assertDistributor(actor);
   const v = stationSchema.parse(input);
   return withTenant(actor.distributorId, async (tx) => {
-    const s = await tx.station.create({ data: { distributorId: actor.distributorId, name: v.name, phone: v.phone, notes: v.notes } });
+    const s = await tx.station.create({
+      data: { distributorId: actor.distributorId, name: v.name, phone: v.phone, notes: v.notes, defaultUnitPrice: v.defaultUnitPrice === null ? null : new Prisma.Decimal(v.defaultUnitPrice) },
+    });
     await audit(tx, actor, { action: "station.create", entityType: "station", entityId: s.id, distributorId: actor.distributorId, after: s });
     return s;
   }).catch(dupName);
@@ -41,7 +51,11 @@ export async function updateStation(actor: Actor, id: string, input: unknown) {
   return withTenant(actor.distributorId, async (tx) => {
     const before = await tx.station.findUnique({ where: { id } });
     if (!before) throw notFound("المحطة");
-    const after = await tx.station.update({ where: { id }, data: v });
+    const { defaultUnitPrice, ...rest } = v;
+    const after = await tx.station.update({
+      where: { id },
+      data: { ...rest, ...(defaultUnitPrice !== undefined ? { defaultUnitPrice: defaultUnitPrice === null ? null : new Prisma.Decimal(defaultUnitPrice) } : {}) },
+    });
     await audit(tx, actor, { action: "station.update", entityType: "station", entityId: id, distributorId: actor.distributorId, before, after });
     return after;
   }).catch(dupName);
@@ -69,6 +83,13 @@ const shipmentSchema = z.object({
     return d;
   }),
   quantity: z.coerce.number().int().min(1, "عدد الجرار المستلمة مطلوب").max(10_000),
+  // سعر شراء الجرة في هذه الشحنة؛ إن غاب يُستخدم السعر الافتراضي للمحطة.
+  unitPrice: z
+    .union([z.string(), z.number()])
+    .optional()
+    .nullable()
+    .transform((v) => (v === null || v === undefined || v === "" ? null : String(v).replace(/[٫,]/g, ".")))
+    .refine((v) => v === null || /^\d{1,8}(\.\d{1,2})?$/.test(v), "سعر غير صالح"),
   cylinderIds: z.array(z.string().uuid()).max(10_000).default([]),
   reference: z.string().trim().max(100).optional().nullable().transform((v) => v || null),
   notes: z.string().trim().max(1000).optional().nullable().transform((v) => v || null),
@@ -94,15 +115,19 @@ export async function receiveShipment(actor: Actor, input: unknown) {
       if (!station) throw notFound("المحطة");
       if (!station.active) throw new AppError("INVALID_STATE", "المحطة غير نشطة");
       const extra = v.quantity - linked.size;
+      const unitPrice = v.unitPrice ?? station.defaultUnitPrice?.toString() ?? null;
+      if (unitPrice === null) throw new AppError("VALIDATION", "أدخل سعر شراء الجرة من المحطة لهذه الشحنة", { unitPrice: "السعر مطلوب" });
+      const settings = await getSettings(tx);
       const sh = await tx.shipment.create({
         data: {
           distributorId: actor.distributorId, stationId: station.id, receivedAt: v.receivedAt, quantity: v.quantity,
           linkedCount: linked.size, extraCount: extra, reference: v.reference, notes: v.notes, idempotencyKey: v.clientOpId, userId: actor.userId,
+          unitPrice: new Prisma.Decimal(unitPrice), currencyCode: settings.currencyCode,
         },
       });
       for (const cylinderId of v.cylinderIds) await fillInTx(tx, actor, { clientOpId: `${v.clientOpId}:${cylinderId}`, cylinderId }, sh.id);
       if (extra > 0) await recordMovement(tx, actor, { type: "SHIPMENT_EXTRA", delta: { extra }, shipmentId: sh.id });
-      await audit(tx, actor, { action: "shipment.receive", entityType: "shipment", entityId: sh.id, distributorId: actor.distributorId, after: { station: station.name, quantity: v.quantity, linked: linked.size, extra, reference: v.reference } });
+      await audit(tx, actor, { action: "shipment.receive", entityType: "shipment", entityId: sh.id, distributorId: actor.distributorId, after: { station: station.name, quantity: v.quantity, linked: linked.size, extra, reference: v.reference, unitPrice, value: new Prisma.Decimal(unitPrice).mul(v.quantity).toFixed(2) } });
       return { id: sh.id, replayed: false };
     }, { timeout: 120_000 });
   } catch (e) {

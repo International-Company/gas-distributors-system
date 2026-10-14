@@ -2,12 +2,13 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, PackageCheck, PackageOpen, Search } from "lucide-react";
+import { Banknote, CheckCircle2, PackageCheck, PackageOpen, Search } from "lucide-react";
 import { Alert, Badge, Button, Card, EmptyState, Field, Input } from "@/components/ui";
 import { Modal } from "@/components/modal";
 import { IdCamera } from "@/components/id-camera";
 import { ApiError, useApi } from "@/components/api-client";
 import { CylinderStatusBadge } from "@/components/cylinder-status";
+import { PaymentDialog } from "@/components/payment-dialog";
 import { formatMoney, isolate } from "@/lib/format";
 import { isValidNationalId } from "@/lib/national-id";
 
@@ -15,8 +16,9 @@ type Cyl = { id: string; label: string; status: "EMPTY" | "FILLED" | "DELIVERED"
 type Ent = {
   id: string; cycle: { id: string; name: string; status: string }; status: string; citizenNumber: string; quantity: number;
   amountDue: string; cylinders: Cyl[]; remaining: number; canReceive: boolean;
+  paid: string; amountRemaining: string; canPay: boolean;
 };
-type Lookup = { found: false; nationalId: string } | { found: true; nationalId: string; citizen: { id: string; fullName: string; phone: string | null }; entitlements: Ent[] };
+type Lookup = { found: false; nationalId: string } | { found: true; nationalId: string; citizen: { id: string; fullName: string; phone: string | null }; totalRemaining: string; entitlements: Ent[] };
 type Method = "MANUAL_ENTRY" | "ID_SCAN";
 
 /**
@@ -41,6 +43,7 @@ export function Counter() {
   const [error, setError] = useState("");
   const [done, setDone] = useState("");
   const [deliverFor, setDeliverFor] = useState<Cyl | null>(null);
+  const [payFor, setPayFor] = useState<Ent | null>(null);
 
   const lookup = async (id = nid) => {
     setError("");
@@ -121,6 +124,7 @@ export function Counter() {
           <Card title={data.citizen.fullName} actions={<Link href={`/d/citizens/${data.citizen.id}`} className="text-sm text-primary hover:underline">ملف المواطن</Link>}>
             <Alert tone="warning">تأكد أن صورة البطاقة تطابق الشخص الحاضر قبل أي عملية.</Alert>
             <div className="mt-2 text-sm text-muted">الهوية: <bdi>{data.nationalId}</bdi>{data.citizen.phone && <> · الهاتف: <bdi>{data.citizen.phone}</bdi></>}</div>
+            <div className="mt-1 text-sm">إجمالي المتبقي عبر الدورات: <strong>{formatMoney(data.totalRemaining)}</strong></div>
           </Card>
           {data.entitlements.length === 0 && <EmptyState>لا يوجد استحقاق في الدورة النشطة ولا جرار معلقة لهذا المواطن.</EmptyState>}
           {data.entitlements.map((e) => (
@@ -138,6 +142,8 @@ export function Counter() {
                 <span>المستحق: {e.quantity} جرة</span>
                 <span>لم تُستلم بعد: {e.remaining}</span>
                 <span>المطلوب: {formatMoney(e.amountDue)}</span>
+                <span>المدفوع: {formatMoney(e.paid)}</span>
+                <span className={Number(e.amountRemaining) > 0 ? "font-semibold text-warning" : "text-success"}>المتبقي: {formatMoney(e.amountRemaining)}</span>
               </div>
               {e.cylinders.length > 0 && (
                 <ul className="mb-3 divide-y divide-border rounded-lg border border-border">
@@ -155,14 +161,35 @@ export function Counter() {
                   ))}
                 </ul>
               )}
-              {e.canReceive && (
-                <Button variant="secondary" loading={busy === `receive-${e.id}`} onClick={() => receive(e)}>
-                  <PackageOpen className="size-4" /> استلام جرة فارغة {e.quantity > 1 && `(${e.quantity - e.remaining + 1} من ${e.quantity})`}
-                </Button>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {e.canReceive && (
+                  <Button variant="secondary" loading={busy === `receive-${e.id}`} onClick={() => receive(e)}>
+                    <PackageOpen className="size-4" /> استلام جرة فارغة {e.quantity > 1 && `(${e.quantity - e.remaining + 1} من ${e.quantity})`}
+                  </Button>
+                )}
+                {e.canPay && (
+                  <Button variant="secondary" onClick={() => { setDone(""); setError(""); setPayFor(e); }}>
+                    <Banknote className="size-4" /> تحصيل
+                  </Button>
+                )}
+              </div>
             </Card>
           ))}
         </>
+      )}
+
+      {payFor && data?.found && (
+        <PaymentDialog
+          entitlementId={payFor.id}
+          title={`${data.citizen.fullName} — ${payFor.cycle.name}`}
+          remaining={payFor.amountRemaining}
+          onClose={() => setPayFor(null)}
+          onDone={async (msg) => {
+            setPayFor(null);
+            await lookup(data.nationalId);
+            setDone(msg);
+          }}
+        />
       )}
 
       {deliverFor && data?.found && (

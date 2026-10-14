@@ -441,6 +441,7 @@ model Entitlement {
 
   changes   EntitlementChange[]
   cylinders Cylinder[]
+  payments  Payment[]
 
   @@index([distributorId, citizenNumber])
   @@index([citizenId])
@@ -583,10 +584,13 @@ model Station {
   name          String
   phone         String?
   notes         String?
+  // سعر شراء الجرة الافتراضي من المحطة؛ يُقترح عند تسجيل الشحنة ويمكن تعديله لها.
+  defaultUnitPrice Decimal? @db.Decimal(12, 2)
   active        Boolean    @default(true)
   createdAt     DateTime   @default(now())
 
   shipments Shipment[]
+  payments  StationPayment[]
 
   @@unique([distributorId, name])
   @@map("stations")
@@ -609,6 +613,9 @@ model Shipment {
   extraCount     Int // منها كمية غير مرتبطة بمواطنين
   reference      String?
   notes          String?
+  // سعر شراء الجرة في هذه الشحنة وعملته وقت الاستلام. قيمة الشحنة = العدد × السعر.
+  unitPrice      Decimal        @default(0) @db.Decimal(12, 2)
+  currencyCode   String         @default("ILS")
   status         ShipmentStatus @default(ACTIVE)
   idempotencyKey String
   userId         String         @db.Uuid
@@ -663,4 +670,83 @@ model InventoryBalance {
   updatedAt     DateTime @default(now()) @updatedAt
 
   @@map("inventory_balances")
+}
+
+// ============================================================
+// المرحلة 4: المالية
+// كل سجل مالي لا يُعدّل ولا يُحذف؛ التصحيح بإلغاء مسبب (ACTIVE → CANCELLED) مرة واحدة.
+// ============================================================
+
+enum FinanceStatus {
+  ACTIVE
+  CANCELLED
+}
+
+// تحصيل من مواطن على استحقاق دورة محددة. مستقل عن عمليات الجرار.
+model Payment {
+  id             String        @id @default(uuid()) @db.Uuid
+  distributorId  String        @db.Uuid
+  entitlementId  String        @db.Uuid
+  entitlement    Entitlement   @relation(fields: [entitlementId], references: [id])
+  cycleId        String        @db.Uuid
+  amount         Decimal       @db.Decimal(12, 2)
+  currencyCode   String
+  paidAt         DateTime
+  notes          String?
+  status         FinanceStatus @default(ACTIVE)
+  idempotencyKey String
+  userId         String        @db.Uuid
+  createdAt      DateTime      @default(now())
+  cancelledAt    DateTime?
+  cancelledById  String?       @db.Uuid
+  cancelReason   String?
+
+  @@unique([distributorId, idempotencyKey])
+  @@index([entitlementId])
+  @@index([distributorId, paidAt])
+  @@map("payments")
+}
+
+model Expense {
+  id             String        @id @default(uuid()) @db.Uuid
+  distributorId  String        @db.Uuid
+  amount         Decimal       @db.Decimal(12, 2)
+  currencyCode   String
+  spentAt        DateTime
+  description    String
+  status         FinanceStatus @default(ACTIVE)
+  idempotencyKey String
+  userId         String        @db.Uuid
+  createdAt      DateTime      @default(now())
+  cancelledAt    DateTime?
+  cancelledById  String?       @db.Uuid
+  cancelReason   String?
+
+  @@unique([distributorId, idempotencyKey])
+  @@index([distributorId, spentAt])
+  @@map("expenses")
+}
+
+// دفعة من الموزّع لمحطة تعبئة. مستقلة عن استلام الشحنات.
+model StationPayment {
+  id             String        @id @default(uuid()) @db.Uuid
+  distributorId  String        @db.Uuid
+  stationId      String        @db.Uuid
+  station        Station       @relation(fields: [stationId], references: [id])
+  amount         Decimal       @db.Decimal(12, 2)
+  currencyCode   String
+  paidAt         DateTime
+  reference      String?
+  notes          String?
+  status         FinanceStatus @default(ACTIVE)
+  idempotencyKey String
+  userId         String        @db.Uuid
+  createdAt      DateTime      @default(now())
+  cancelledAt    DateTime?
+  cancelledById  String?       @db.Uuid
+  cancelReason   String?
+
+  @@unique([distributorId, idempotencyKey])
+  @@index([stationId, paidAt])
+  @@map("station_payments")
 }

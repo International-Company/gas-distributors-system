@@ -2,7 +2,7 @@ import type { Actor } from "@/server/actor";
 import { hasPermission } from "@/server/actor";
 import type { AdminPermission } from "@/server/permissions";
 
-export type NavIcon = "home" | "users" | "tags" | "shield" | "history" | "login" | "bug" | "settings" | "user" | "calendar" | "file" | "search" | "merge" | "alert" | "counter" | "cylinder" | "truck" | "warehouse" | "factory";
+export type NavIcon = "home" | "users" | "tags" | "shield" | "history" | "login" | "bug" | "settings" | "user" | "calendar" | "file" | "search" | "merge" | "alert" | "counter" | "cylinder" | "truck" | "warehouse" | "factory" | "wallet" | "banknote" | "receipt";
 export type NavItem = { href: string; label: string; icon: NavIcon };
 
 type Def = NavItem & { permission?: AdminPermission; superAdmin?: boolean };
@@ -26,6 +26,9 @@ const DISTRIBUTOR_NAV: Def[] = [
   { href: "/d/cylinders", label: "الجرار", icon: "cylinder" },
   { href: "/d/shipments", label: "الشحنات", icon: "truck" },
   { href: "/d/inventory", label: "المخزون", icon: "warehouse" },
+  { href: "/d/finance", label: "الصندوق", icon: "wallet" },
+  { href: "/d/collections", label: "التحصيلات", icon: "banknote" },
+  { href: "/d/expenses", label: "المصروفات", icon: "receipt" },
   { href: "/d/statements", label: "الكشوف", icon: "file" },
   { href: "/d/cycles", label: "الدورات", icon: "calendar" },
   { href: "/d/stations", label: "المحطات", icon: "factory" },

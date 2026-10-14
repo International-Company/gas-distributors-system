@@ -3,7 +3,7 @@ import { requirePageActor } from "@/server/http/context";
 import { getShipment } from "@/server/services/shipments";
 import { Badge, Card, DetailList, EmptyState, PageHeader } from "@/components/ui";
 import { CylinderStatusBadge } from "@/components/cylinder-status";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatMoney } from "@/lib/format";
 import { CancelShipment } from "./cancel";
 
 export const metadata = { title: "شحنة" };
@@ -23,13 +23,15 @@ export default async function ShipmentPage({ params }: { params: Promise<{ id: s
             ["العدد المستلم", s.quantity],
             ["منها جرار مواطنين", s.linkedCount],
             ["منها كمية إضافية", s.extraCount],
+            ["سعر شراء الجرة", formatMoney(s.unitPrice, s.currencyCode)],
+            ["قيمة الشحنة", formatMoney(s.unitPrice.mul(s.quantity), s.currencyCode)],
             ["المرجع", s.reference ?? "—"],
             ["ملاحظات", s.notes ?? "—"],
             ["تاريخ التسجيل", formatDateTime(s.createdAt)],
             ...(s.cancelReason ? ([["سبب الإلغاء", `${s.cancelReason} (${formatDateTime(s.cancelledAt)})`]] as [string, string][]) : []),
           ]}
         />
-        <p className="mt-3 text-xs text-muted">استلام الشحنة لا يعني دفع قيمتها؛ حساب المحطة والمدفوعات في المرحلة 4.</p>
+        <p className="mt-3 text-xs text-muted">استلام الشحنة لا يعني دفع قيمتها. الدفعات تُسجل من <Link className="text-primary hover:underline" href={`/d/stations/${s.station.id}`}>حساب المحطة</Link>.</p>
       </Card>
       <Card title="جرار المواطنين المعبأة ضمن الشحنة">
         {s.fills.length === 0 ? (

@@ -21,7 +21,7 @@ export default async function CyclePage({ params }: { params: Promise<{ id: stri
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="المستحقون" value={s.citizens} tone="primary" />
         <Stat label="الجرار المستحقة" value={s.cylinders} />
-        <Stat label="المبلغ المطلوب" value={formatMoney(s.amountDue)} />
+        <Stat label="المطلوب / المحصل" value={<span>{formatMoney(s.amountDue)} <span className="text-base text-success">/ {formatMoney(s.collected)}</span></span>} />
         <Stat label="كشوف قيد المراجعة" value={s.pendingStatements} tone={s.pendingStatements ? "warning" : "neutral"} />
       </div>
       <Card title="بيانات الدورة">
@@ -38,7 +38,7 @@ export default async function CyclePage({ params }: { params: Promise<{ id: stri
           <Stat label="معبأة لم تُسلّم" value={s.cylinderStates.filled} tone={s.cylinderStates.filled ? "primary" : "neutral"} />
           <Stat label="مسلّمة" value={s.cylinderStates.delivered} tone="success" />
         </div>
-        <p className="mt-3 text-xs text-muted">إغلاق الدورة لا يلغي الجرار المعلقة: يمكن تعبئتها وتسليمها بعد الإغلاق، ولا تُستلم جرار جديدة فيها. ملخص التحصيل يُضاف مع المرحلة 4.</p>
+        <p className="mt-3 text-xs text-muted">إغلاق الدورة لا يلغي الجرار المعلقة: يمكن تعبئتها وتسليمها بعد الإغلاق، ولا تُستلم جرار جديدة فيها. الإغلاق لا يصفّر المستحقات؛ يبقى التحصيل ممكنًا.</p>
       </Card>
       <CycleActions cycle={{ id: c.id, status: c.status, unitPrice: c.unitPrice.toString() }} pendingStatements={s.pendingStatements} />
       <Card title="كشوف الدورة">
