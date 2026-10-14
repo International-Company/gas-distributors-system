@@ -6,6 +6,7 @@ import { Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "@/co
 import { Pagination } from "@/components/pagination";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { CancelRecord } from "../finance/cancel-record";
+import { DateInput } from "@/components/date-input";
 
 export const metadata = { title: "التحصيلات" };
 
@@ -27,8 +28,8 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
           <option value="ACTIVE">نافذ</option>
           <option value="CANCELLED">ملغى</option>
         </Select>
-        <Input type="date" name="from" defaultValue={sp.from} className="w-40" aria-label="من" />
-        <Input type="date" name="to" defaultValue={sp.to} className="w-40" aria-label="إلى" />
+        <DateInput name="from" defaultValue={sp.from} className="w-40" aria-label="من" />
+        <DateInput name="to" defaultValue={sp.to} className="w-40" aria-label="إلى" />
         <Button type="submit" variant="secondary">تطبيق</Button>
       </form>
       <Card title={`الإجمالي النافذ: ${formatMoney(data.totalAmount)}`}>

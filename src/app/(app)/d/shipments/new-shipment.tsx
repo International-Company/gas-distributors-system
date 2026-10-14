@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Truck } from "lucide-react";
 import { Alert, Button, Card, Field, Input, Select, Textarea } from "@/components/ui";
 import { ApiError, useApi } from "@/components/api-client";
+import { DateInput } from "@/components/date-input";
 
 type Empty = { id: string; label: string; name: string; cycleName: string };
 
@@ -62,7 +63,7 @@ export function NewShipment({ stations, empties, emptiesTotal }: { stations: { i
           <Field label="المحطة" htmlFor="sh-st"><Select id="sh-st" value={v.stationId} onChange={(e) => setV({ ...v, stationId: e.target.value, unitPrice: stations.find((s) => s.id === e.target.value)?.defaultUnitPrice ?? "" })}>{stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></Field>
           <Field label="عدد الجرار المستلمة" htmlFor="sh-q" error={fields.quantity}><Input id="sh-q" dir="ltr" inputMode="numeric" value={v.quantity} onChange={(e) => setV({ ...v, quantity: e.target.value.replace(/\D/g, "") })} required /></Field>
           <Field label="سعر شراء الجرة من المحطة" htmlFor="sh-price" error={fields.unitPrice} hint="مقترح من سعر المحطة، ويمكن تعديله لهذه الشحنة"><Input id="sh-price" dir="ltr" inputMode="decimal" value={v.unitPrice} onChange={(e) => setV({ ...v, unitPrice: e.target.value })} required /></Field>
-          <Field label="وقت الاستلام" htmlFor="sh-at" hint="الآن إن تُرك فارغًا"><Input id="sh-at" type="datetime-local" value={v.receivedAt} onChange={(e) => setV({ ...v, receivedAt: e.target.value })} /></Field>
+          <Field label="وقت الاستلام" htmlFor="sh-at" hint="الآن إن تُرك فارغًا"><DateInput id="sh-at" withTime value={v.receivedAt} onChange={(x) => setV({ ...v, receivedAt: x })} placeholder="الآن" /></Field>
           <Field label="المرجع (اختياري)" htmlFor="sh-ref"><Input id="sh-ref" value={v.reference} onChange={(e) => setV({ ...v, reference: e.target.value })} /></Field>
           <Field label="ملاحظات (اختياري)" htmlFor="sh-notes" className="sm:col-span-2"><Textarea id="sh-notes" className="min-h-10" value={v.notes} onChange={(e) => setV({ ...v, notes: e.target.value })} /></Field>
         </div>

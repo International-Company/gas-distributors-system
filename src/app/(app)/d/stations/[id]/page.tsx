@@ -5,6 +5,7 @@ import { Badge, Button, Card, EmptyState, Input, PageHeader, Stat } from "@/comp
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { CancelRecord } from "../../finance/cancel-record";
 import { StationPaymentForm, StationPriceForm } from "./forms";
+import { DateInput } from "@/components/date-input";
 
 export const metadata = { title: "حساب محطة" };
 
@@ -29,8 +30,8 @@ export default async function StationPage({ params, searchParams }: { params: Pr
       </div>
       <Card title="كشف الحساب">
         <form method="get" className="mb-3 flex flex-wrap gap-2">
-          <Input type="date" name="from" defaultValue={sp.from} className="w-40" aria-label="من" />
-          <Input type="date" name="to" defaultValue={sp.to} className="w-40" aria-label="إلى" />
+          <DateInput name="from" defaultValue={sp.from} className="w-40" aria-label="من" />
+          <DateInput name="to" defaultValue={sp.to} className="w-40" aria-label="إلى" />
           <Button type="submit" variant="secondary">عرض الفترة</Button>
           {(sp.from || sp.to) && <Link href={`/d/stations/${s.id}`} className="self-center text-sm text-primary hover:underline">كل الفترات</Link>}
         </form>

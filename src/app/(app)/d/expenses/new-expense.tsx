@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Field, Input } from "@/components/ui";
 import { ApiError, useApi } from "@/components/api-client";
+import { DateInput } from "@/components/date-input";
 
 export function NewExpense() {
   const api = useApi();
@@ -38,7 +39,7 @@ export function NewExpense() {
         {error && <Alert tone="danger" className="sm:col-span-4">{error}</Alert>}
         <Field label="المبلغ" htmlFor="ex-amount" error={fields.amount}><Input id="ex-amount" dir="ltr" inputMode="decimal" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} required /></Field>
         <Field label="الوصف" htmlFor="ex-desc" error={fields.description} className="sm:col-span-2"><Input id="ex-desc" value={v.description} onChange={(e) => setV({ ...v, description: e.target.value })} required /></Field>
-        <Field label="التاريخ" htmlFor="ex-at" hint="الآن إن تُرك فارغًا" error={fields.spentAt}><Input id="ex-at" type="datetime-local" value={v.spentAt} onChange={(e) => setV({ ...v, spentAt: e.target.value })} /></Field>
+        <Field label="التاريخ" htmlFor="ex-at" hint="الآن إن تُرك فارغًا" error={fields.spentAt}><DateInput id="ex-at" withTime value={v.spentAt} onChange={(x) => setV({ ...v, spentAt: x })} placeholder="الآن" /></Field>
         <div className="sm:col-span-4"><Button type="submit" loading={busy}>تسجيل</Button></div>
       </form>
     </Card>

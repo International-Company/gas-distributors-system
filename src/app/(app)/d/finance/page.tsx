@@ -4,6 +4,7 @@ import { cashBox } from "@/server/services/finance";
 import { listCycles } from "@/server/services/cycles";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Stat } from "@/components/ui";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
+import { DateInput } from "@/components/date-input";
 
 export const metadata = { title: "الصندوق" };
 
@@ -26,8 +27,8 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
           <option value="">كل الدورات</option>
           {cycles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
-        <Input type="date" name="from" defaultValue={sp.from} className="w-40" aria-label="من تاريخ" />
-        <Input type="date" name="to" defaultValue={sp.to} className="w-40" aria-label="إلى تاريخ" />
+        <DateInput name="from" defaultValue={sp.from} className="w-40" aria-label="من تاريخ" />
+        <DateInput name="to" defaultValue={sp.to} className="w-40" aria-label="إلى تاريخ" />
         <Button type="submit" variant="secondary">تطبيق</Button>
         {Object.keys(filters).length > 0 && <Link href="/d/finance" className="self-center text-sm text-primary hover:underline">مسح</Link>}
       </form>

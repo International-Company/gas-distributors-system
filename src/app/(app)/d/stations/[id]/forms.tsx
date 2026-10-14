@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Field, Input } from "@/components/ui";
 import { ApiError, useApi, useFormSubmit } from "@/components/api-client";
+import { DateInput } from "@/components/date-input";
 
 export function StationPaymentForm({ stationId }: { stationId: string }) {
   const api = useApi();
@@ -38,7 +39,7 @@ export function StationPaymentForm({ stationId }: { stationId: string }) {
         {error && <Alert tone="danger" className="sm:col-span-2">{error}</Alert>}
         {done && <Alert tone="success" className="sm:col-span-2">{done}</Alert>}
         <Field label="المبلغ" htmlFor="sp-amount"><Input id="sp-amount" dir="ltr" inputMode="decimal" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} required /></Field>
-        <Field label="التاريخ" htmlFor="sp-at" hint="الآن إن تُرك فارغًا"><Input id="sp-at" type="datetime-local" value={v.paidAt} onChange={(e) => setV({ ...v, paidAt: e.target.value })} /></Field>
+        <Field label="التاريخ" htmlFor="sp-at" hint="الآن إن تُرك فارغًا"><DateInput id="sp-at" withTime value={v.paidAt} onChange={(x) => setV({ ...v, paidAt: x })} placeholder="الآن" /></Field>
         <Field label="المرجع (اختياري)" htmlFor="sp-ref"><Input id="sp-ref" value={v.reference} onChange={(e) => setV({ ...v, reference: e.target.value })} /></Field>
         <Field label="ملاحظات (اختياري)" htmlFor="sp-notes"><Input id="sp-notes" value={v.notes} onChange={(e) => setV({ ...v, notes: e.target.value })} /></Field>
         <div className="sm:col-span-2"><Button type="submit" loading={busy}>تسجيل الدفعة</Button></div>

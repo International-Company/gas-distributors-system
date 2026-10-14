@@ -3,6 +3,7 @@ import { listLoginAttempts } from "@/server/services/logs";
 import { Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
 import { formatDateTime } from "@/lib/format";
+import { DateInput } from "@/components/date-input";
 
 export const metadata = { title: "محاولات الدخول" };
 
@@ -32,8 +33,8 @@ export default async function LoginAttemptsPage({ searchParams }: { searchParams
           <option value="yes">ناجحة</option>
           <option value="no">فاشلة</option>
         </Select>
-        <Input type="date" name="from" defaultValue={sp.from} aria-label="من تاريخ" />
-        <Input type="date" name="to" defaultValue={sp.to} aria-label="إلى تاريخ" />
+        <DateInput name="from" defaultValue={sp.from} aria-label="من تاريخ" />
+        <DateInput name="to" defaultValue={sp.to} aria-label="إلى تاريخ" />
         <Button type="submit" className="col-span-2 md:col-span-1">تطبيق</Button>
       </form>
       <Card>

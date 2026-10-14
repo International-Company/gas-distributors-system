@@ -5,6 +5,7 @@ import { Pagination } from "@/components/pagination";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { CancelRecord } from "../finance/cancel-record";
 import { NewExpense } from "./new-expense";
+import { DateInput } from "@/components/date-input";
 
 export const metadata = { title: "المصروفات" };
 
@@ -18,8 +19,8 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       <PageHeader title="المصروفات التشغيلية" />
       <NewExpense />
       <form method="get" className="flex flex-wrap gap-2">
-        <Input type="date" name="from" defaultValue={sp.from} className="w-40" aria-label="من" />
-        <Input type="date" name="to" defaultValue={sp.to} className="w-40" aria-label="إلى" />
+        <DateInput name="from" defaultValue={sp.from} className="w-40" aria-label="من" />
+        <DateInput name="to" defaultValue={sp.to} className="w-40" aria-label="إلى" />
         <Button type="submit" variant="secondary">تطبيق</Button>
       </form>
       <Card title={`الإجمالي النافذ: ${formatMoney(data.totalAmount)}`}>

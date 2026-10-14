@@ -3,6 +3,7 @@ import { listAuditLogs } from "@/server/services/logs";
 import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
 import { AUDIT_ACTION_LABELS, AuditTable } from "@/components/audit-table";
 import { Pagination } from "@/components/pagination";
+import { DateInput } from "@/components/date-input";
 
 export const metadata = { title: "سجل التدقيق" };
 
@@ -21,8 +22,8 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
             <option key={k} value={k}>{v}</option>
           ))}
         </Select>
-        <Input type="date" name="from" defaultValue={sp.from} aria-label="من تاريخ" />
-        <Input type="date" name="to" defaultValue={sp.to} aria-label="إلى تاريخ" />
+        <DateInput name="from" defaultValue={sp.from} aria-label="من تاريخ" />
+        <DateInput name="to" defaultValue={sp.to} aria-label="إلى تاريخ" />
         {sp.distributorId && <input type="hidden" name="distributorId" value={sp.distributorId} />}
         <Button type="submit" className="col-span-2 md:col-span-1">تطبيق</Button>
       </form>

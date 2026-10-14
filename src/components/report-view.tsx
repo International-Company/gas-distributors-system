@@ -3,6 +3,7 @@ import { Download, Printer } from "lucide-react";
 import type { Col, FilterSpec, ReportResult, ReportRow } from "@/server/reports/types";
 import { Alert, Button, Card, EmptyState, Input, Select, Stat, buttonClass } from "./ui";
 import { formatMoney } from "@/lib/format";
+import { DateInput } from "@/components/date-input";
 
 /** يعرض قيمة خلية حسب نوع العمود؛ الأرقام اللاتينية والتواريخ معزولة الاتجاه. */
 export function cellText(v: ReportRow[string], col: Col) {
@@ -36,7 +37,13 @@ export function ReportView({ result: r, filters, cycles, sp, base, xlsxPath, pri
       {filters.length > 0 && (
         <form method="get" action={base} className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-surface p-3">
           {Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
-          {filters.map((f) => (
+          {filters.map((f) => (f.kind === "from" || f.kind === "to") ? (
+            // حقل التاريخ في حاوية عادية لا <label>: النقر داخل لوحة التقويم لا يجب أن يُعيد تفعيل الحقل.
+            <div key={f.key} className="flex flex-col gap-1 text-xs text-muted">
+              <span>{f.label}</span>
+              <DateInput name={f.key} defaultValue={sp[f.key]} className="w-40" aria-label={f.label} />
+            </div>
+          ) : (
             <label key={f.key} className="flex flex-col gap-1 text-xs text-muted">
               {f.label}
               {f.kind === "cycle" || f.kind === "cycleOptional" ? (
@@ -48,9 +55,7 @@ export function ReportView({ result: r, filters, cycles, sp, base, xlsxPath, pri
                 <Select name={f.key} defaultValue={sp[f.key] ?? ""} className="w-48">
                   {f.options!.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </Select>
-              ) : (
-                <Input type="date" name={f.key} defaultValue={sp[f.key]} className="w-40" />
-              )}
+              ) : null}
             </label>
           ))}
           <Button type="submit" variant="secondary">تطبيق</Button>

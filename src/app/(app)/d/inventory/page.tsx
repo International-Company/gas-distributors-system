@@ -5,6 +5,7 @@ import { Alert, Button, Card, EmptyState, Input, PageHeader, Select, Stat } from
 import { Pagination } from "@/components/pagination";
 import { MOVEMENT_LABELS } from "@/components/cylinder-status";
 import { formatDateTime } from "@/lib/format";
+import { DateInput } from "@/components/date-input";
 
 export const metadata = { title: "المخزون" };
 
@@ -37,8 +38,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
             <option value="">كل الحركات</option>
             {Object.entries(MOVEMENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </Select>
-          <Input type="date" name="from" defaultValue={sp.from} className="w-40" aria-label="من" />
-          <Input type="date" name="to" defaultValue={sp.to} className="w-40" aria-label="إلى" />
+          <DateInput name="from" defaultValue={sp.from} className="w-40" aria-label="من" />
+          <DateInput name="to" defaultValue={sp.to} className="w-40" aria-label="إلى" />
           <Button type="submit" variant="secondary">تطبيق</Button>
         </form>
         {moves.rows.length === 0 ? (

@@ -6,6 +6,7 @@ import { Alert, Button, Card, Field, Input, Textarea } from "@/components/ui";
 import { Modal } from "@/components/modal";
 import { useApi, useFormSubmit } from "@/components/api-client";
 import { endOfDayIso, toDateInput } from "@/lib/format";
+import { DateInput } from "@/components/date-input";
 
 type D = { id: string; status: string; suspensionReason: string | null; isTrial: boolean; expiresAt: string | null; isPinned: boolean; locked: boolean };
 type Can = { status: boolean; credentials: boolean; manage: boolean };
@@ -127,7 +128,7 @@ function ActionModal({ kind, d, onClose, onDone }: { kind: Kind; d: D; onClose: 
               <input type="checkbox" className="size-4" checked={isTrial} onChange={(e) => setIsTrial(e.target.checked)} /> حساب تجريبي
             </label>
             <Field label={isTrial ? "تاريخ انتهاء التجربة" : "تاريخ الانتهاء (اختياري)"} htmlFor="m-exp" error={fields.expiresAt} hint={isTrial ? undefined : "اتركه فارغًا لحساب بلا مدة محددة"}>
-              <Input id="m-exp" type="date" min={toDateInput(new Date())} value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} required={isTrial} />
+              <DateInput id="m-exp" min={toDateInput(new Date())} value={expiresAt} onChange={setExpiresAt} required={isTrial} />
             </Field>
           </div>
         )}

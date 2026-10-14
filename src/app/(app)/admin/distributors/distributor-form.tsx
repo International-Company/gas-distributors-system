@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Field, Input, Select } from "@/components/ui";
 import { useApi, useFormSubmit } from "@/components/api-client";
 import { endOfDayIso, toDateInput } from "@/lib/format";
+import { DateInput } from "@/components/date-input";
 
 type Category = { id: string; name: string };
 type Existing = { id: string; name: string; phone: string; region: string; categoryId: string | null; username: string };
@@ -84,7 +85,7 @@ export function DistributorForm({ categories, existing }: { categories: Category
               <input type="checkbox" className="size-4" checked={v.isTrial} onChange={set("isTrial")} /> حساب تجريبي
             </label>
             <Field label={v.isTrial ? "تاريخ انتهاء التجربة" : "تاريخ انتهاء الحساب (اختياري)"} htmlFor="f-exp" error={fields.expiresAt} hint={v.isTrial ? undefined : "اتركه فارغًا لحساب بلا مدة محددة"}>
-              <Input id="f-exp" type="date" min={toDateInput(new Date())} value={v.expiresAt} onChange={set("expiresAt")} required={v.isTrial} />
+              <DateInput id="f-exp" min={toDateInput(new Date())} value={v.expiresAt} onChange={(x) => setV({ ...v, expiresAt: x })} required={v.isTrial} />
             </Field>
           </div>
         )}
