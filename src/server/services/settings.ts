@@ -61,6 +61,10 @@ export const settingsSchema = z.object({
     .transform((xs) => [...new Set(xs)])
     .optional(),
   maxUploadMb: z.coerce.number().int().min(1, "الحد الأدنى 1 ميغابايت").max(HARD_MAX_UPLOAD_MB, `الحد الأقصى ${HARD_MAX_UPLOAD_MB} ميغابايت`).optional(),
+  offlineReceive: z.boolean().optional(),
+  offlineDeliver: z.boolean().optional(),
+  offlinePayments: z.boolean().optional(),
+  offlineMaxAgeHours: z.coerce.number().int().min(1, "الحد الأدنى ساعة").max(72, "الحد الأقصى 72 ساعة").optional(),
 });
 
 export async function updateSettings(actor: Actor, input: unknown) {
@@ -68,7 +72,7 @@ export async function updateSettings(actor: Actor, input: unknown) {
   const data = settingsSchema.parse(input);
   return withSystem(async (tx) => {
     const before = await getSettings(tx);
-    const after = await tx.systemSettings.update({ where: { id: 1 }, data: { ...data, updatedById: actor.userId } });
+    const after = await tx.systemSettings.update({ where: { id: 1 }, data: { ...data, updatedById: actor.userId }, omit: { logoData: true } });
     // تغيير العملة لا يغيّر قيم العمليات التاريخية: كل عملية مالية ستخزن عملتها وقت تنفيذها.
     await audit(tx, actor, { action: "settings.update", entityType: "settings", entityId: "1", before, after });
     return after;

@@ -9,21 +9,21 @@ import { cleanText, digitsOnly, normalizeDigits } from "@/lib/arabic";
 import { isValidNationalId } from "@/lib/national-id";
 import { recordMovement, reverseMovement } from "./inventory";
 import { isolate } from "@/lib/format";
+import { cylinderLabel, normalizeLabel } from "@/lib/cylinder-label";
 import { billableWhere, paidByEntitlement } from "./finance";
+import { assertOfflineAllowed, offlineAtSchema, withOfflineConflict } from "./offline";
 
 // ---------------------------------------------------------------------------
 // أدوات
 // ---------------------------------------------------------------------------
 
-/** رقم الجرة: رقم المواطن، مع لاحقة إذا كان للاستحقاق أكثر من جرة («100-2»). */
-export function cylinderLabel(citizenNumber: string, quantity: number, seq: number) {
-  return quantity === 1 && seq === 1 ? citizenNumber : `${citizenNumber}-${seq}`;
-}
+export { cylinderLabel };
 
-/** توحيد الرقم المكتوب على الجرة كما يدخله المستخدم: أرقام لاتينية، دون مسافات، وشرطة موحدة. */
-const normalizeLabel = (s: string) => normalizeDigits(cleanText(s)).replace(/\s/g, "").replace(/[\u2010-\u2015_]/g, "-");
 
 const opKey = z.string().trim().min(8, "معرّف العملية مطلوب").max(100);
+/** حقول العمليات المرسلة من قائمة انتظار الجهاز (نُفذت دون اتصال أو لم يتأكد إرسالها). */
+const offlineFields = { offlineAt: offlineAtSchema, snapshotAt: offlineAtSchema };
+
 const identity = {
   nationalId: z.string().trim().min(1, "أدخل رقم الهوية من البطاقة"),
   identityMethod: z.enum(["MANUAL_ENTRY", "ID_SCAN"]).default("MANUAL_ENTRY"),
@@ -133,7 +133,15 @@ async function replayAfterLock(tx: Tx, actor: DistributorActor, key: string, typ
 // استلام الجرة الفارغة
 // ---------------------------------------------------------------------------
 
-const receiveSchema = z.object({ clientOpId: opKey, entitlementId: z.string().uuid(), ...identity, weightKg: weight });
+const receiveSchema = z.object({
+  clientOpId: opKey,
+  entitlementId: z.string().uuid(),
+  ...identity,
+  weightKg: weight,
+  // الرقم الذي عرضه الجهاز ليُكتب على الجرة؛ إن اختلف عن الرقم المستحق فعلًا تُرفض العملية ولا يُعاد الترقيم بصمت.
+  expectedLabel: z.string().trim().max(40).optional().nullable(),
+  ...offlineFields,
+});
 
 /**
  * استلام جرة فارغة: تحقق الهوية، استحقاق قائم في كشف معتمد، الدورة نشطة، وجرة غير مستلمة بعد.
@@ -142,7 +150,9 @@ const receiveSchema = z.object({ clientOpId: opKey, entitlementId: z.string().uu
 export async function receiveEmpty(actor: Actor, input: unknown) {
   assertDistributor(actor);
   const v = receiveSchema.parse(input);
-  return idempotent(actor, v.clientOpId, "RECEIVE_EMPTY", async () => {
+  const op = { id: v.clientOpId, kind: "receive" as const, nationalId: digitsOnly(v.nationalId), offlineAt: v.offlineAt, summary: v.expectedLabel ? `الجرة ${isolate(v.expectedLabel)}` : "جرة فارغة" };
+  return withOfflineConflict(actor, op, () => idempotent(actor, v.clientOpId, "RECEIVE_EMPTY", async () => {
+    await assertOfflineAllowed("receive", v.offlineAt, v.snapshotAt);
     try {
       return await withTenant(actor.distributorId, async (tx) => {
         await lockRow(tx, "entitlements", v.entitlementId);
@@ -160,11 +170,15 @@ export async function receiveEmpty(actor: Actor, input: unknown) {
         const used = new Set(e.cylinders.map((c) => c.seq));
         let seq = 1;
         while (used.has(seq)) seq++;
+        const label = cylinderLabel(e.citizenNumber, e.quantity, seq);
+        if (v.expectedLabel && normalizeLabel(v.expectedLabel) !== label) {
+          throw new AppError("CONFLICT", `الرقم المعروض على الجهاز (${isolate(v.expectedLabel)}) لا يطابق رقم الجرة المستحق الآن (${isolate(label)}). استُلمت جرة لهذا الاستحقاق من جهاز آخر`);
+        }
         const cylinder = await tx.cylinder.create({
-          data: { distributorId: actor.distributorId, cycleId: e.cycleId, entitlementId: e.id, seq, label: cylinderLabel(e.citizenNumber, e.quantity, seq), status: "EMPTY" },
+          data: { distributorId: actor.distributorId, cycleId: e.cycleId, entitlementId: e.id, seq, label, status: "EMPTY" },
         });
         const op = await tx.cylinderOperation.create({
-          data: { distributorId: actor.distributorId, cylinderId: cylinder.id, type: "RECEIVE_EMPTY", idempotencyKey: v.clientOpId, identityMethod: v.identityMethod, weightKg: v.weightKg, userId: actor.userId },
+          data: { distributorId: actor.distributorId, cylinderId: cylinder.id, type: "RECEIVE_EMPTY", idempotencyKey: v.clientOpId, identityMethod: v.identityMethod, weightKg: v.weightKg, offlineAt: v.offlineAt, userId: actor.userId },
         });
         await recordMovement(tx, actor, { type: "RECEIVE_EMPTY", delta: { empty: 1 }, operationId: op.id });
         return result({ ...op, cylinder }, false);
@@ -173,7 +187,7 @@ export async function receiveEmpty(actor: Actor, input: unknown) {
       if (err instanceof IdentityMismatch) await recordIdentityCase(actor, err, "استلام جرة فارغة");
       throw err;
     }
-  }, (op) => result(op, true));
+  }, (op) => result(op, true)));
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +248,7 @@ const deliverSchema = z.object({
   cylinderLabel: z.string().trim().min(1, "أدخل الرقم المكتوب على الجرة"),
   ...identity,
   weightKg: weight,
+  ...offlineFields,
 });
 
 /**
@@ -243,7 +258,9 @@ const deliverSchema = z.object({
 export async function deliverCylinder(actor: Actor, input: unknown) {
   assertDistributor(actor);
   const v = deliverSchema.parse(input);
-  return idempotent(actor, v.clientOpId, "DELIVER", async () => {
+  const op = { id: v.clientOpId, kind: "deliver" as const, nationalId: digitsOnly(v.nationalId), offlineAt: v.offlineAt, summary: `الجرة ${isolate(normalizeLabel(v.cylinderLabel))}` };
+  return withOfflineConflict(actor, op, () => idempotent(actor, v.clientOpId, "DELIVER", async () => {
+    await assertOfflineAllowed("deliver", v.offlineAt, v.snapshotAt);
     try {
       return await withTenant(actor.distributorId, async (tx) => {
         await lockRow(tx, "cylinders", v.cylinderId);
@@ -264,7 +281,7 @@ export async function deliverCylinder(actor: Actor, input: unknown) {
           }
         }
         const op = await tx.cylinderOperation.create({
-          data: { distributorId: actor.distributorId, cylinderId: c.id, type: "DELIVER", idempotencyKey: v.clientOpId, identityMethod: v.identityMethod, weightKg: v.weightKg, userId: actor.userId },
+          data: { distributorId: actor.distributorId, cylinderId: c.id, type: "DELIVER", idempotencyKey: v.clientOpId, identityMethod: v.identityMethod, weightKg: v.weightKg, offlineAt: v.offlineAt, userId: actor.userId },
         });
         const updated = await tx.cylinder.update({ where: { id: c.id }, data: { status: "DELIVERED" } });
         await recordMovement(tx, actor, { type: "DELIVER", delta: { filled: -1 }, operationId: op.id });
@@ -274,7 +291,7 @@ export async function deliverCylinder(actor: Actor, input: unknown) {
       if (err instanceof IdentityMismatch) await recordIdentityCase(actor, err, "تسليم جرة");
       throw err;
     }
-  }, (op) => result(op, true));
+  }, (op) => result(op, true)));
 }
 
 // ---------------------------------------------------------------------------
@@ -363,7 +380,7 @@ export async function counterLookup(actor: Actor, input: unknown) {
         citizenNumber: e.citizenNumber,
         quantity: e.quantity,
         amountDue: e.amountDue,
-        cylinders: e.cylinders.map((c) => ({ id: c.id, label: c.label, status: c.status })),
+        cylinders: e.cylinders.map((c) => ({ id: c.id, label: c.label, status: c.status, seq: c.seq })),
         remaining: Math.max(0, e.quantity - e.cylinders.length),
         canReceive: e.status === "ACTIVE" && e.cycle.status === "OPEN" && e.cylinders.length < e.quantity,
         paid: balance(e).paid,

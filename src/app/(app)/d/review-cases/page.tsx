@@ -6,6 +6,12 @@ import { NewCase, ResolveCase } from "./actions";
 
 export const metadata = { title: "حالات المراجعة" };
 
+const TYPE_LABELS: Record<string, { label: string; tone: "neutral" | "danger" | "warning" }> = {
+  NOT_IN_STATEMENT: { label: "غير موجود في كشف", tone: "neutral" },
+  IDENTITY_MISMATCH: { label: "تعذر التحقق من الهوية", tone: "danger" },
+  OFFLINE_CONFLICT: { label: "تعارض مزامنة", tone: "danger" },
+};
+
 export default async function ReviewCasesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
   const sp = await searchParams;
@@ -14,7 +20,7 @@ export default async function ReviewCasesPage({ searchParams }: { searchParams: 
     <div className="space-y-6">
       <PageHeader
         title="حالات المراجعة"
-        description="مواطنون حضروا ولا يظهرون في كشف معتمد. تسجيل الحالة لا ينشئ مواطنًا ولا استحقاقًا."
+        description="مواطنون لا يظهرون في كشف معتمد، وتعذر التحقق من الهوية، وعمليات نُفذت دون اتصال ورفضها الخادم. تسجيل الحالة لا ينشئ مواطنًا ولا استحقاقًا ولا يغيّر أي رصيد."
       />
       <NewCase initialOpen={sp.new === "1"} initial={{ nationalId: sp.nationalId ?? "", fullName: sp.fullName ?? "" }} />
       {cases.length === 0 ? (
@@ -31,7 +37,10 @@ export default async function ReviewCasesPage({ searchParams }: { searchParams: 
                   <div className="mt-1 text-xs text-muted">{formatDateTime(c.createdAt)}</div>
                   {c.resolution && <div className="mt-2 rounded bg-surface-2 p-2">النتيجة: {c.resolution} <span className="text-xs text-muted">({formatDateTime(c.resolvedAt)})</span></div>}
                 </div>
-                {c.status === "OPEN" ? <Badge tone="warning">مفتوحة</Badge> : <Badge tone="success">مغلقة</Badge>}
+                <span className="flex gap-1">
+                  <Badge tone={TYPE_LABELS[c.type]?.tone ?? "neutral"}>{TYPE_LABELS[c.type]?.label ?? c.type}</Badge>
+                  {c.status === "OPEN" ? <Badge tone="warning">مفتوحة</Badge> : <Badge tone="success">مغلقة</Badge>}
+                </span>
               </div>
               {c.status === "OPEN" && <ResolveCase id={c.id} />}
             </Card>

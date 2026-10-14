@@ -203,6 +203,11 @@ model SystemSettings {
   // أنواع الملفات المسموح رفعها (امتدادات) والحد الأقصى لحجم الملف.
   allowedFileTypes   String[] @default(["pdf", "xlsx", "jpg", "jpeg", "png", "webp"])
   maxUploadMb        Int      @default(20)
+  // العمل دون اتصال (الشباك فقط): أي العمليات مسموحة، وأقصى عمر لبيانات الجهاز قبل منع العمل دون اتصال وحذفها.
+  offlineReceive     Boolean  @default(true)
+  offlineDeliver     Boolean  @default(true)
+  offlinePayments    Boolean  @default(true)
+  offlineMaxAgeHours Int      @default(24)
   updatedAt          DateTime @updatedAt
   updatedById        String?  @db.Uuid
 
@@ -492,6 +497,7 @@ model MergeDismissal {
 enum ReviewCaseType {
   NOT_IN_STATEMENT
   IDENTITY_MISMATCH // تعذر التحقق من الهوية عند استلام أو تسليم
+  OFFLINE_CONFLICT // عملية نُفذت دون اتصال ورفضها الخادم عند المزامنة
 }
 
 enum ReviewCaseStatus {
@@ -514,7 +520,10 @@ model ReviewCase {
   resolvedById  String?          @db.Uuid
   resolvedAt    DateTime?
   resolution    String?
+  // معرّف العملية المحلية التي رفضها الخادم (حالة واحدة لكل عملية مهما أُعيدت المزامنة).
+  sourceOpId    String?
 
+  @@unique([distributorId, sourceOpId])
   @@index([distributorId, status])
   @@map("review_cases")
 }
@@ -580,6 +589,8 @@ model CylinderOperation {
   identityMethod IdentityMethod?
   // الوزن بالكيلوغرام (اختياري): وزن الجرة فارغة عند الاستلام، وممتلئة عند التسليم.
   weightKg       Decimal?        @db.Decimal(5, 2)
+  // وقت التنفيذ على الجهاز إن نُفذت دون اتصال (at = وقت وصولها للخادم).
+  offlineAt      DateTime?
   userId         String          @db.Uuid
   at             DateTime        @default(now())
   cancelledAt    DateTime?
@@ -708,6 +719,8 @@ model Payment {
   notes          String?
   status         FinanceStatus @default(ACTIVE)
   idempotencyKey String
+  // وقت التسجيل على الجهاز إن سُجل دون اتصال.
+  offlineAt      DateTime?
   userId         String        @db.Uuid
   createdAt      DateTime      @default(now())
   cancelledAt    DateTime?

@@ -2,7 +2,7 @@ import type { Actor } from "@/server/actor";
 import { hasPermission } from "@/server/actor";
 import type { AdminPermission } from "@/server/permissions";
 
-export type NavIcon = "home" | "users" | "tags" | "shield" | "history" | "login" | "bug" | "settings" | "user" | "calendar" | "file" | "search" | "merge" | "alert" | "counter" | "cylinder" | "truck" | "warehouse" | "factory" | "wallet" | "banknote" | "receipt" | "chart";
+export type NavIcon = "home" | "users" | "tags" | "shield" | "history" | "login" | "bug" | "settings" | "user" | "calendar" | "file" | "search" | "merge" | "alert" | "counter" | "cylinder" | "truck" | "warehouse" | "factory" | "wallet" | "banknote" | "receipt" | "chart" | "sync";
 export type NavItem = { href: string; label: string; icon: NavIcon };
 
 type Def = NavItem & { permission?: AdminPermission; superAdmin?: boolean };
@@ -23,6 +23,7 @@ const ADMIN_NAV: Def[] = [
 const DISTRIBUTOR_NAV: Def[] = [
   { href: "/d", label: "الرئيسية", icon: "home" },
   { href: "/d/counter", label: "الشباك", icon: "counter" },
+  { href: "/d/sync", label: "المزامنة", icon: "sync" },
   { href: "/d/citizens", label: "المواطنون", icon: "search" },
   { href: "/d/cylinders", label: "الجرار", icon: "cylinder" },
   { href: "/d/shipments", label: "الشحنات", icon: "truck" },
@@ -43,7 +44,7 @@ const DISTRIBUTOR_NAV: Def[] = [
 export type NavOverrides = Record<string, { label?: string; order?: number; hidden?: boolean }>;
 
 /** أقسام لا يجوز إخفاؤها حتى لا يُحجب الوصول إلى الإعدادات أو الحساب. */
-export const NAV_LOCKED = new Set(["/admin", "/admin/settings", "/d", "/account"]);
+export const NAV_LOCKED = new Set(["/admin", "/admin/settings", "/d", "/d/sync", "/account"]);
 
 /** كل الأقسام المعرفة مع القائمة التي تنتمي لها (لشاشة الإعدادات). */
 export const ALL_NAV = [

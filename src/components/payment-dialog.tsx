@@ -11,14 +11,16 @@ type Props = {
   title: string;
   remaining: string;
   onClose: () => void;
-  onDone: (msg: string) => void;
+  onDone: (msg: string, tone?: "success" | "warning") => void;
+  /** تنفيذ بديل (الشباك: عبر قائمة الجهاز ليعمل دون اتصال). يرجع رسالة النتيجة. */
+  submitOverride?: (v: { full: boolean; amount?: string; notes: string }) => Promise<{ message: string; tone: "success" | "warning" }>;
 };
 
 /**
  * تسجيل تحصيل على استحقاق دورة: كامل المتبقي أو مبلغ جزئي.
  * معرّف العملية ثابت للمحاولة نفسها، فإعادة الإرسال بعد انقطاع لا تكرر التحصيل.
  */
-export function PaymentDialog({ entitlementId, title, remaining, onClose, onDone }: Props) {
+export function PaymentDialog({ entitlementId, title, remaining, onClose, onDone, submitOverride }: Props) {
   const api = useApi();
   const key = useRef<string | null>(null);
   const [mode, setMode] = useState<"full" | "partial">("full");
@@ -31,6 +33,17 @@ export function PaymentDialog({ entitlementId, title, remaining, onClose, onDone
     e.preventDefault();
     setBusy(true);
     setError("");
+    if (submitOverride) {
+      try {
+        const r = await submitOverride({ full: mode === "full", amount: mode === "partial" ? amount : undefined, notes });
+        onDone(r.message, r.tone);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "تعذر تسجيل التحصيل");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     key.current ??= crypto.randomUUID();
     try {
       const r = await api<{ amount: string; remaining: string }>("POST", "/api/v1/payments", {

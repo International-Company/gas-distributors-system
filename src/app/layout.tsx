@@ -9,7 +9,12 @@ const font = IBM_Plex_Sans_Arabic({ subsets: ["arabic", "latin"], weight: ["400"
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getPublicSettings().catch(() => null);
   const name = s?.systemName ?? "نظام إدارة موزّعي الغاز";
-  return { title: { default: name, template: `%s | ${name}` }, robots: { index: false, follow: false } };
+  return {
+    title: { default: name, template: `%s | ${name}` },
+    robots: { index: false, follow: false },
+    icons: { apple: "/icons/apple-touch-icon.png" },
+    appleWebApp: { capable: true, title: name, statusBarStyle: "default" },
+  };
 }
 
 export const viewport: Viewport = {

@@ -3,22 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, Banknote, Receipt, Wallet, Bug, CalendarDays, Cylinder, Factory, ScanLine, Truck, Warehouse, FileSpreadsheet, Flame, GitMerge, History, Home, LogIn, LogOut, Menu, Search, Settings, Shield, ShieldAlert, Tags, User, Users, X } from "lucide-react";
+import { BarChart3, Banknote, RefreshCw, Receipt, Wallet, Bug, CalendarDays, Cylinder, Factory, ScanLine, Truck, Warehouse, FileSpreadsheet, Flame, GitMerge, History, Home, LogIn, LogOut, Menu, Search, Settings, Shield, ShieldAlert, Tags, User, Users, X } from "lucide-react";
 import type { NavIcon, NavItem } from "@/lib/nav";
 import { cn } from "./ui";
 import { ThemeToggle } from "./theme";
 import { ApiProvider } from "./api-client";
+import { OfflineIndicator, OfflineProvider, useOffline } from "./offline-provider";
+import { onLogout } from "@/lib/offline/engine";
 
 const ICONS: Record<NavIcon, typeof Home> = {
   home: Home, users: Users, tags: Tags, shield: Shield, history: History, login: LogIn, bug: Bug, settings: Settings, user: User,
   calendar: CalendarDays, file: FileSpreadsheet, search: Search, merge: GitMerge, alert: ShieldAlert,
   counter: ScanLine, cylinder: Cylinder, truck: Truck, warehouse: Warehouse, factory: Factory,
-  wallet: Wallet, banknote: Banknote, receipt: Receipt, chart: BarChart3,
+  wallet: Wallet, banknote: Banknote, receipt: Receipt, chart: BarChart3, sync: RefreshCw,
 };
 
-type Props = { systemName: string; logoUrl?: string | null; nav: NavItem[]; userName: string; roleLabel: string; children: ReactNode };
+type Props = { systemName: string; logoUrl?: string | null; nav: NavItem[]; userName: string; roleLabel: string; userId: string; offline: boolean; children: ReactNode };
 
-export function AppShell({ systemName, logoUrl, nav, userName, roleLabel, children }: Props) {
+export function AppShell({ systemName, logoUrl, nav, userName, roleLabel, userId, offline, children }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   useEffect(() => setOpen(false), [pathname]);
@@ -69,6 +71,7 @@ export function AppShell({ systemName, logoUrl, nav, userName, roleLabel, childr
 
   return (
     <ApiProvider>
+     <OfflineProvider userId={userId} enabled={offline}>
       <div className="min-h-dvh md:flex">
         <aside className="no-print sticky top-0 hidden h-dvh w-64 shrink-0 border-l border-border bg-surface md:block">{sidebar}</aside>
 
@@ -92,22 +95,35 @@ export function AppShell({ systemName, logoUrl, nav, userName, roleLabel, childr
               </button>
               <span className="text-sm font-semibold md:hidden">{systemName}</span>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <OfflineIndicator />
+              <ThemeToggle />
+            </div>
           </header>
           <main className="mx-auto w-full max-w-6xl px-4 py-6">{children}</main>
         </div>
       </div>
+     </OfflineProvider>
     </ApiProvider>
   );
 }
 
 function LogoutButton() {
   const [busy, setBusy] = useState(false);
+  const offline = useOffline();
   return (
     <button
       disabled={busy}
       onClick={async () => {
+        if (offline?.enabled && offline.unsynced > 0) {
+          const ok = window.confirm(
+            `على هذا الجهاز ${offline.unsynced} عملية لم تُرسل للخادم بعد. لن تُحذف، وستُرسل عند دخولك مرة أخرى من هذا الجهاز. هل تريد الخروج؟`,
+          );
+          if (!ok) return;
+        }
         setBusy(true);
+        // بيانات الجهاز (اللقطة وذاكرة الصفحات) تُحذف عند الخروج.
+        if (offline?.enabled) await onLogout(offline.userId).catch(() => {});
         await fetch("/api/v1/auth/logout", { method: "POST" }).catch(() => {});
         window.location.href = "/login";
       }}

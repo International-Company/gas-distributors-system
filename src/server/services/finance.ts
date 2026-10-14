@@ -7,6 +7,7 @@ import { type Actor, type DistributorActor, assertDistributor } from "../actor";
 import { audit } from "../audit";
 import { formatMoney } from "@/lib/format";
 import { getSettings } from "./settings";
+import { assertOfflineAllowed, offlineAtSchema, withOfflineConflict } from "./offline";
 
 // ---------------------------------------------------------------------------
 // أدوات مشتركة
@@ -93,6 +94,8 @@ const paymentSchema = z
     amount: moneySchema.optional(),
     paidAt: whenSchema,
     notes: z.string().trim().max(500).optional().nullable().transform((v) => v || null),
+    offlineAt: offlineAtSchema,
+    snapshotAt: offlineAtSchema,
   })
   .refine((v) => v.full || v.amount, { message: "أدخل المبلغ أو اختر سداد كامل المتبقي", path: ["amount"] });
 
@@ -112,7 +115,9 @@ export async function recordPayment(actor: Actor, input: unknown) {
       const e = await tx.entitlement.findUniqueOrThrow({ where: { id: p.entitlementId } });
       return { paymentId: p.id, amount: p.amount.toFixed(2), paid: paid.toFixed(2), remaining: e.amountDue.sub(paid).toFixed(2) };
     });
-  return idempotent(find, async () => {
+  const op = { id: v.clientOpId, kind: "payment" as const, offlineAt: v.offlineAt, summary: v.full ? "كامل المتبقي" : `مبلغ ${formatMoney(v.amount!)}` };
+  return withOfflineConflict(actor, op, () => idempotent(find, async () => {
+    await assertOfflineAllowed("payment", v.offlineAt, v.snapshotAt);
     try {
       return await withTenant(actor.distributorId, async (tx) => {
         const locked = await tx.$queryRaw<{ id: string }[]>`SELECT "id" FROM "entitlements" WHERE "id" = ${v.entitlementId}::uuid FOR UPDATE`;
@@ -132,7 +137,7 @@ export async function recordPayment(actor: Actor, input: unknown) {
         const p = await tx.payment.create({
           data: {
             distributorId: actor.distributorId, entitlementId: e.id, cycleId: e.cycleId, amount, currencyCode: e.currencyCode,
-            paidAt: v.paidAt, notes: v.notes, idempotencyKey: v.clientOpId, userId: actor.userId,
+            paidAt: v.offlineAt ?? v.paidAt, notes: v.notes, idempotencyKey: v.clientOpId, offlineAt: v.offlineAt, userId: actor.userId,
           },
         });
         const newPaid = paid.add(amount);
@@ -143,7 +148,7 @@ export async function recordPayment(actor: Actor, input: unknown) {
       if (isCheckViolation(e, "دفع زائد")) throw new AppError("VALIDATION", "المبلغ يتجاوز المتبقي", { amount: "يتجاوز المتبقي" });
       throw e;
     }
-  });
+  }));
 }
 
 export async function cancelPayment(actor: Actor, paymentId: string, input: unknown) {

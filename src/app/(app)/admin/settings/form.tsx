@@ -9,6 +9,7 @@ type S = {
   systemName: string; contactPhone: string; contactEmail: string; contactAddress: string;
   currencyCode: string; currencySymbol: string; sessionIdleMinutes: number; maxFailedLogins: number; lockoutMinutes: number;
   allowedFileTypes: string[]; maxUploadMb: number;
+  offlineReceive: boolean; offlineDeliver: boolean; offlinePayments: boolean; offlineMaxAgeHours: number;
 };
 
 export function SettingsForm({ initial, supportedTypes }: { initial: S; supportedTypes: string[] }) {
@@ -103,6 +104,35 @@ export function SettingsForm({ initial, supportedTypes }: { initial: S; supporte
           </fieldset>
           <Field label="الحد الأقصى لحجم الملف (ميغابايت)" htmlFor="s-maxmb" error={fields.maxUploadMb} hint="من 1 إلى 50">
             <Input id="s-maxmb" type="number" min={1} max={50} className="w-32" value={v.maxUploadMb} onChange={(e) => { setSaved(false); setV({ ...v, maxUploadMb: Number(e.target.value) }); }} required />
+          </Field>
+        </div>
+      </Card>
+
+      <Card title="العمل دون اتصال (الشباك)">
+        <div className="space-y-4">
+          <p className="text-sm text-muted">
+            العمليات المسموحة تُحفظ على جهاز الموزّع عند انقطاع الإنترنت وتُرسل عند عودته. الخادم يعيد التحقق من كل عملية، وأي تعارض يصبح حالة مراجعة ولا يُحسم تلقائيًا.
+            باقي العمليات (الكشوف، التعبئة، الشحنات، الإلغاء، المصروفات) تتطلب اتصالًا دائمًا.
+          </p>
+          <fieldset className="space-y-2">
+            {([
+              ["offlineReceive", "استلام الجرار الفارغة دون اتصال"],
+              ["offlineDeliver", "تسليم الجرار المعبأة دون اتصال"],
+              ["offlinePayments", "التحصيل دون اتصال"],
+            ] as const).map(([k, label]) => (
+              <label key={k} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="size-4" checked={v[k]} onChange={(e) => { setSaved(false); setV({ ...v, [k]: e.target.checked }); }} />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+          <Field
+            label="أقصى عمر لبيانات الجهاز (ساعات)"
+            htmlFor="s-offline-age"
+            error={fields.offlineMaxAgeHours}
+            hint="من 1 إلى 72. بعدها يُمنع العمل دون اتصال وتُحذف البيانات من الجهاز حتى يتصل مجددًا"
+          >
+            <Input id="s-offline-age" type="number" min={1} max={72} className="w-32" value={v.offlineMaxAgeHours} onChange={(e) => { setSaved(false); setV({ ...v, offlineMaxAgeHours: Number(e.target.value) }); }} required />
           </Field>
         </div>
       </Card>

@@ -5,6 +5,7 @@ import { ownerDb } from "../helpers/factories";
 // هذا الاختبار يفشل إن حذفها ترحيل لاحق بالخطأ.
 
 const CONSTRAINTS = [
+  "system_settings_offline_age_range",
   "cylinder_operations_weight_valid",
   "users_role_distributor", "distributors_archived_consistent", "system_settings_singleton",
   "cycles_id_dist", "citizens_id_dist", "entitlements_id_dist", "statements_id_dist", "stored_files_id_dist",
@@ -16,6 +17,7 @@ const CONSTRAINTS = [
   "expenses_amount_positive", "station_payments_amount_positive", "shipments_unit_price_non_negative",
 ];
 const INDEXES = [
+  "review_cases_distributorId_sourceOpId_key",
   "cycles_one_open_per_distributor", "entitlements_active_citizen_per_cycle", "entitlements_active_number_per_cycle",
   "cylinders_unit_once", "cylinders_label_per_cycle", "cylinder_operations_once", "citizens_name_trgm",
 ];

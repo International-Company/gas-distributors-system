@@ -27,6 +27,10 @@ export default async function SettingsPage() {
           lockoutMinutes: s.lockoutMinutes,
           allowedFileTypes: s.allowedFileTypes,
           maxUploadMb: s.maxUploadMb,
+          offlineReceive: s.offlineReceive,
+          offlineDeliver: s.offlineDeliver,
+          offlinePayments: s.offlinePayments,
+          offlineMaxAgeHours: s.offlineMaxAgeHours,
         }}
         supportedTypes={[...SUPPORTED_FILE_TYPES]}
       />
