@@ -5,6 +5,7 @@ import { ownerDb } from "../helpers/factories";
 // هذا الاختبار يفشل إن حذفها ترحيل لاحق بالخطأ.
 
 const CONSTRAINTS = [
+  "cylinder_operations_weight_valid",
   "users_role_distributor", "distributors_archived_consistent", "system_settings_singleton",
   "cycles_id_dist", "citizens_id_dist", "entitlements_id_dist", "statements_id_dist", "stored_files_id_dist",
   "entitlements_cycle_dist", "entitlements_citizen_dist", "entitlements_statement_dist", "statement_rows_statement_dist",

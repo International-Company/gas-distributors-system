@@ -61,7 +61,7 @@ export function IdCamera({ onConfirm }: { onConfirm: (id: string, method: "ID_SC
               <p className="text-sm">طابق الرقم مع البطاقة ثم أكّده:</p>
               {candidates.map((id) => (
                 <Button key={id} type="button" variant="secondary" className="w-full text-lg tracking-widest" onClick={() => choose(id, "ID_SCAN")}>
-                  <bdi>{id}</bdi> — تأكيد
+                  <bdi dir="ltr">{id}</bdi> — تأكيد
                 </Button>
               ))}
             </div>

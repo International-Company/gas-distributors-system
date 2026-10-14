@@ -25,8 +25,8 @@ export default async function ReviewCasesPage({ searchParams }: { searchParams: 
             <Card key={c.id}>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="text-sm">
-                  <div className="font-semibold">{c.fullName ?? "دون اسم"} {c.nationalId && <span className="font-normal text-muted">— <bdi>{c.nationalId}</bdi></span>}</div>
-                  {c.phone && <div className="text-muted">الهاتف: <bdi>{c.phone}</bdi></div>}
+                  <div className="font-semibold">{c.fullName ?? "دون اسم"} {c.nationalId && <span className="font-normal text-muted">— <bdi dir="ltr">{c.nationalId}</bdi></span>}</div>
+                  {c.phone && <div className="text-muted">الهاتف: <bdi dir="ltr">{c.phone}</bdi></div>}
                   <div className="mt-1">{c.details}</div>
                   <div className="mt-1 text-xs text-muted">{formatDateTime(c.createdAt)}</div>
                   {c.resolution && <div className="mt-2 rounded bg-surface-2 p-2">النتيجة: {c.resolution} <span className="text-xs text-muted">({formatDateTime(c.resolvedAt)})</span></div>}

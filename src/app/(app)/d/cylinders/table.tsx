@@ -60,10 +60,10 @@ export function CylinderTable({ rows, selectable }: { rows: Row[]; selectable: b
         {rows.map((r) => (
           <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
             {selectable && <input type="checkbox" className="size-5" checked={sel.has(r.id)} onChange={() => toggle(r.id)} aria-label={`تحديد ${r.label}`} />}
-            <Link href={`/d/cylinders/${r.id}`} className="min-w-20 text-lg font-bold text-primary hover:underline"><bdi>{r.label}</bdi></Link>
+            <Link href={`/d/cylinders/${r.id}`} className="min-w-20 text-lg font-bold text-primary hover:underline"><bdi dir="ltr">{r.label}</bdi></Link>
             <div className="min-w-0 flex-1 text-sm">
               <Link href={`/d/citizens/${r.citizenId}`} className="font-medium hover:underline">{r.name}</Link>
-              <div className="text-xs text-muted"><bdi>{r.nationalId}</bdi> · {r.cycleName} · {formatDateTime(r.updatedAt)}</div>
+              <div className="text-xs text-muted"><bdi dir="ltr">{r.nationalId}</bdi> · {r.cycleName} · {formatDateTime(r.updatedAt)}</div>
             </div>
             <span className="flex gap-1">
               {r.removed && <Badge tone="danger">أُزيل من الكشف</Badge>}

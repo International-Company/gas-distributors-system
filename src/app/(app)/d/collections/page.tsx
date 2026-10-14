@@ -40,7 +40,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
                 <div>
                   <Link href={`/d/citizens/${p.entitlement.citizen.id}`} className="font-medium text-primary hover:underline">{p.entitlement.nameInStatement}</Link>
-                  <span className="text-xs text-muted"> · رقم <bdi>{p.entitlement.citizenNumber}</bdi> · {p.entitlement.cycle.name} · {formatDateTime(p.paidAt)}</span>
+                  <span className="text-xs text-muted"> · رقم <bdi dir="ltr">{p.entitlement.citizenNumber}</bdi> · {p.entitlement.cycle.name} · {formatDateTime(p.paidAt)}</span>
                   {p.notes && <div className="text-xs text-muted">{p.notes}</div>}
                   {p.status === "CANCELLED" && <div className="text-xs text-danger">أُلغي: {p.cancelReason}</div>}
                 </div>

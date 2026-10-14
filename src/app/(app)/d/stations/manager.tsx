@@ -52,7 +52,7 @@ export function StationsManager({ rows }: { rows: S[] }) {
               <div className="text-sm">
                 <Link href={`/d/stations/${s.id}`} className="font-semibold text-primary hover:underline">{s.name}</Link> {!s.active && <Badge>غير نشطة</Badge>}
                 <div className="text-xs text-muted">
-                  {s.defaultUnitPrice ? <>سعر الجرة: {formatMoney(s.defaultUnitPrice)}</> : "دون سعر افتراضي"} · {s.shipments} شحنة {s.phone && <>· <bdi>{s.phone}</bdi></>}
+                  {s.defaultUnitPrice ? <>سعر الجرة: {formatMoney(s.defaultUnitPrice)}</> : "دون سعر افتراضي"} · {s.shipments} شحنة {s.phone && <>· <bdi dir="ltr">{s.phone}</bdi></>}
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-4 text-sm">

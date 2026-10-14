@@ -41,7 +41,7 @@ export default async function ShipmentPage({ params }: { params: Promise<{ id: s
             {s.fills.map((f) => (
               <li key={f.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <span>
-                  <Link href={`/d/cylinders/${f.cylinder.id}`} className="font-semibold text-primary hover:underline"><bdi>{f.cylinder.label}</bdi></Link> — {f.cylinder.entitlement.nameInStatement}
+                  <Link href={`/d/cylinders/${f.cylinder.id}`} className="font-semibold text-primary hover:underline"><bdi dir="ltr">{f.cylinder.label}</bdi></Link> — {f.cylinder.entitlement.nameInStatement}
                   <span className="text-xs text-muted"> · {f.cylinder.entitlement.cycle.name}</span>
                 </span>
                 <span className="flex gap-1">

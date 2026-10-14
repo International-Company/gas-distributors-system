@@ -232,7 +232,8 @@ export function extractStatementMeta(text: string): { date: string | null; scale
   const t = normalizeDigits(text);
   const d = t.match(/(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})-(\d{1,2})-(\d{4})/);
   const date = d ? (d[1] ? `${d[3].padStart(2, "0")}/${d[2].padStart(2, "0")}/${d[1]}` : `${d[4].padStart(2, "0")}/${d[5].padStart(2, "0")}/${d[6]}`) : null;
-  const s = normalizeName(t).match(/ميزان\s*(?:المتسلسل)?\s*(\d{1,6})/);
+  // «رقم الميزان» تحديدًا، لا أي كلمة «ميزان» (قد ترد في اسم مواطن يليه رقم هويته).
+  const s = normalizeName(t).match(/رقم\s*الميزان\s*(?:المتسلسل)?[^\p{L}\d]{0,5}(\d{1,6})(?!\d)/u);
   return { date, scaleNumber: s ? s[1] : null };
 }
 
@@ -241,4 +242,20 @@ export function suggestCycleFromText(text: string): string | null {
   const t = normalizeName(text);
   const m = t.match(/دوره\s*(?:رقم\s*)?(\d{1,4})/);
   return m ? m[1] : null;
+}
+
+/**
+ * رقم المواطن داخل الدورة: الدورة تضم عدة كشوف (موازين) يبدأ تسلسل كل منها من 1،
+ * فيُسبق المتسلسل برقم الميزان («295-17»). الرقم غير العددي يبقى كما هو.
+ */
+export function withScale(scale: string | null | undefined, n: string | null): string | null {
+  if (!n || !scale) return n;
+  return /^\d+$/.test(n) ? `${scale}-${n}` : n;
+}
+
+/** تغيير رقم الميزان: يُزال السابق ثم يُضاف الجديد. */
+export function rescale(prev: string | null | undefined, next: string | null | undefined, n: string | null): string | null {
+  if (!n) return n;
+  const raw = prev && n.startsWith(`${prev}-`) ? n.slice(prev.length + 1) : n;
+  return withScale(next, raw);
 }

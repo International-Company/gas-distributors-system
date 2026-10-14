@@ -66,11 +66,11 @@ export function CitizenSearch() {
                     </span>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
-                    <span>الهوية: <bdi>{r.nationalId}</bdi></span>
-                    {r.phone && <span>الهاتف: <bdi>{r.phone}</bdi></span>}
+                    <span>الهوية: <bdi dir="ltr">{r.nationalId}</bdi></span>
+                    {r.phone && <span>الهاتف: <bdi dir="ltr">{r.phone}</bdi></span>}
                     {r.current && (
                       <>
-                        <span className="font-semibold text-text">رقم المواطن: <bdi>{r.current.citizenNumber}</bdi></span>
+                        <span className="font-semibold text-text">رقم المواطن: <bdi dir="ltr">{r.current.citizenNumber}</bdi></span>
                         <span>الجرار: {r.current.quantity}</span>
                         <span>المطلوب: {formatMoney(r.current.amountDue)}</span>
                       </>

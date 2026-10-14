@@ -34,14 +34,14 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
       <PageHeader title={c.fullName} actions={c.archivedAt ? <Badge>مؤرشف</Badge> : undefined} />
       {p.mergedInto && (
         <Alert tone="warning">
-          هذا السجل مدموج في <Link className="underline" href={`/d/citizens/${p.mergedInto.id}`}>{p.mergedInto.fullName} (<bdi>{p.mergedInto.nationalId}</bdi>)</Link>.
+          هذا السجل مدموج في <Link className="underline" href={`/d/citizens/${p.mergedInto.id}`}>{p.mergedInto.fullName} (<bdi dir="ltr">{p.mergedInto.nationalId}</bdi>)</Link>.
         </Alert>
       )}
       <Card title="البيانات الأساسية">
         <DetailList
           items={[
-            ["رقم الهوية", <bdi key="n">{c.nationalId}</bdi>],
-            ["الهاتف", <bdi key="p">{c.phone ?? "—"}</bdi>],
+            ["رقم الهوية", <bdi dir="ltr" key="n">{c.nationalId}</bdi>],
+            ["الهاتف", <bdi dir="ltr" key="p">{c.phone ?? "—"}</bdi>],
             ["عدد الدورات", p.entitlements.length],
             ["إجمالي المطلوب عبر الدورات", formatMoney(p.totals.due)],
             ["إجمالي المدفوع", formatMoney(p.totals.paid)],
@@ -75,7 +75,7 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
                 {p.entitlements.map((e) => (
                   <tr key={e.id}>
                     <td className="py-2">{e.cycle.name} {e.cycle.status === "OPEN" && <Badge tone="success">نشطة</Badge>}</td>
-                    <td className="py-2 font-semibold"><bdi>{e.citizenNumber}</bdi></td>
+                    <td className="py-2 font-semibold"><bdi dir="ltr">{e.citizenNumber}</bdi></td>
                     <td className="py-2">{e.quantity}</td>
                     <td className="py-2">{formatMoney(e.amountDue)} <span className="text-xs text-muted">{e.amountSource === "AUTHORITY" ? "(من الكشف)" : "(محسوب)"}</span></td>
                     <td className="py-2">{p.balances[e.id] ? formatMoney(p.balances[e.id].paid) : "—"}</td>
@@ -88,7 +88,7 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
                     <td className="py-2">
                       <div className="flex flex-wrap gap-1">
                         {e.cylinders.filter((c) => c.status !== "VOID").map((c) => (
-                          <Link key={c.id} href={`/d/cylinders/${c.id}`} className="inline-flex items-center gap-1"><bdi className="text-xs font-semibold">{c.label}</bdi><CylinderStatusBadge status={c.status} /></Link>
+                          <Link key={c.id} href={`/d/cylinders/${c.id}`} className="inline-flex items-center gap-1"><bdi dir="ltr" className="text-xs font-semibold">{c.label}</bdi><CylinderStatusBadge status={c.status} /></Link>
                         ))}
                         {e.cylinders.filter((c) => c.status !== "VOID").length === 0 && <span className="text-xs text-muted">لم تُستلم</span>}
                       </div>

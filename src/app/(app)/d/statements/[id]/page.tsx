@@ -76,7 +76,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
 
       {pending && ex.needsOcr && <OcrPanel statementId={id} />}
 
-      {pending && <MetaPanel statement={{ id, title: st.title, cycleId: st.cycleId, supersedesId: st.supersedesId }} cycles={data.cycles.map((c) => ({ id: c.id, name: c.name, status: c.status }))} approved={data.approvedStatements} />}
+      {pending && <MetaPanel statement={{ id, title: st.title, cycleId: st.cycleId, supersedesId: st.supersedesId, scaleNumber: st.scaleNumber }} cycles={data.cycles.map((c) => ({ id: c.id, name: c.name, status: c.status }))} approved={data.approvedStatements} />}
 
       {pending && data.preview.length > 0 && (
         <MappingPanel

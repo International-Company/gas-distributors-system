@@ -62,12 +62,25 @@ const entitlementStats = Prisma.sql`
 type EntRow = {
   citizenNumber: string; name: string; nationalId: string; phone: string | null; quantity: number;
   received: bigint; empty: bigint; filled: bigint; delivered: bigint; amountDue: Prisma.Decimal; paid: Prisma.Decimal;
+  emptyKg: Prisma.Decimal | null; fullKg: Prisma.Decimal | null; gasKg: Prisma.Decimal | null;
 };
+
+/** الأوزان من العمليات النافذة: الفارغ عند الاستلام، والممتلئ عند التسليم، والغاز = الفرق للجرة الموزونة مرتين. */
+const weightStats = Prisma.sql`
+  (SELECT sum(o."weightKg") FROM "cylinder_operations" o JOIN "cylinders" w ON w."id" = o."cylinderId"
+    WHERE w."entitlementId" = e."id" AND o."type" = 'RECEIVE_EMPTY' AND o."status" = 'ACTIVE') AS "emptyKg",
+  (SELECT sum(o."weightKg") FROM "cylinder_operations" o JOIN "cylinders" w ON w."id" = o."cylinderId"
+    WHERE w."entitlementId" = e."id" AND o."type" = 'DELIVER' AND o."status" = 'ACTIVE') AS "fullKg",
+  (SELECT sum(d."weightKg" - r."weightKg") FROM "cylinders" w
+    JOIN "cylinder_operations" r ON r."cylinderId" = w."id" AND r."type" = 'RECEIVE_EMPTY' AND r."status" = 'ACTIVE'
+    JOIN "cylinder_operations" d ON d."cylinderId" = w."id" AND d."type" = 'DELIVER' AND d."status" = 'ACTIVE'
+    WHERE w."entitlementId" = e."id" AND r."weightKg" IS NOT NULL AND d."weightKg" IS NOT NULL) AS "gasKg"`;
+const kg = (d: Prisma.Decimal | null) => (d === null ? null : new Prisma.Decimal(d).toFixed(2));
 
 async function entitlementRows(tx: Tx, cycleId: string) {
   return tx.$queryRaw<EntRow[]>`
     SELECT e."citizenNumber", e."nameInStatement" AS name, c."nationalId", COALESCE(e."phoneInStatement", c."phone") AS phone, e."quantity",
-      ${entitlementStats}, e."amountDue",
+      ${entitlementStats}, e."amountDue", ${weightStats},
       COALESCE((SELECT sum(p."amount") FROM "payments" p WHERE p."entitlementId" = e."id" AND p."status" = 'ACTIVE'), 0) AS paid
     FROM "entitlements" e
     JOIN "citizens" c ON c."id" = e."citizenId"
@@ -106,7 +119,8 @@ export const DISTRIBUTOR_REPORTS: ReportDef[] = [
         .filter(({ state }) => !p.state || (p.state === "NOT_DELIVERED" ? state !== "DELIVERED" : state === p.state))
         .map(({ r, state }) => ({
           citizenNumber: r.citizenNumber, name: r.name, nationalId: r.nationalId, phone: r.phone, quantity: r.quantity,
-          state: ENT_STATE_LABELS[state], remaining: new Prisma.Decimal(r.amountDue).sub(r.paid).toFixed(2), notes: "",
+          state: ENT_STATE_LABELS[state], emptyKg: kg(r.emptyKg), fullKg: kg(r.fullKg), gasKg: kg(r.gasKg),
+          remaining: new Prisma.Decimal(r.amountDue).sub(r.paid).toFixed(2), notes: "",
         }));
       return {
         title: `كشف المواطنين — ${cycle.name}`,
@@ -118,6 +132,9 @@ export const DISTRIBUTOR_REPORTS: ReportDef[] = [
           { key: "phone", label: "الهاتف", type: "ltr", width: 13 },
           { key: "quantity", label: "الجرار", type: "number", width: 7 },
           { key: "state", label: "حالة الجرة", width: 18 },
+          { key: "emptyKg", label: "وزن فارغ", type: "number", width: 9 },
+          { key: "fullKg", label: "وزن ممتلئ", type: "number", width: 9 },
+          { key: "gasKg", label: "الغاز", type: "number", width: 8 },
           { key: "remaining", label: "المتبقي", type: "money", width: 10 },
           { key: "notes", label: "ملاحظات / توقيع", width: 18 },
         ],

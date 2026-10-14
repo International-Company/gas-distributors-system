@@ -24,7 +24,7 @@ export default async function MergePage() {
               {[a, b].map((c) => (
                 <div key={c.id} className="rounded-lg bg-surface-2 p-3 text-sm">
                   <Link href={`/d/citizens/${c.id}`} className="font-semibold text-primary hover:underline">{c.fullName}</Link>
-                  <div className="mt-1 text-muted">الهوية: <bdi>{c.nationalId}</bdi></div>
+                  <div className="mt-1 text-muted">الهوية: <bdi dir="ltr">{c.nationalId}</bdi></div>
                   <div className="text-muted">استحقاقات قائمة: {c.entitlements.map((e) => e.cycle.name).join("، ") || "لا يوجد"}</div>
                 </div>
               ))}

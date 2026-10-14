@@ -94,7 +94,7 @@ export function SettingsForm({ initial, supportedTypes }: { initial: S; supporte
                       setV({ ...v, allowedFileTypes: e.target.checked ? [...v.allowedFileTypes, t] : v.allowedFileTypes.filter((x) => x !== t) });
                     }}
                   />
-                  <bdi>.{t}</bdi>
+                  <bdi dir="ltr">.{t}</bdi>
                 </label>
               ))}
             </div>

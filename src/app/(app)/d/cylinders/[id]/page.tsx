@@ -3,7 +3,7 @@ import { requirePageActor } from "@/server/http/context";
 import { getCylinder } from "@/server/services/operations";
 import { Badge, Card, DetailList, PageHeader } from "@/components/ui";
 import { CylinderStatusBadge, OPERATION_LABELS } from "@/components/cylinder-status";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, isolate } from "@/lib/format";
 import { CancelOperation } from "./cancel";
 
 export const metadata = { title: "جرة" };
@@ -14,17 +14,22 @@ export default async function CylinderPage({ params }: { params: Promise<{ id: s
   const c = await getCylinder(actor, id);
   const active = c.operations.filter((o) => o.status === "ACTIVE");
   const last = active[active.length - 1];
+  const emptyKg = active.find((o) => o.type === "RECEIVE_EMPTY")?.weightKg ?? null;
+  const fullKg = active.find((o) => o.type === "DELIVER")?.weightKg ?? null;
   return (
     <div className="space-y-6">
-      <PageHeader title={`الجرة ${c.label}`} actions={<CylinderStatusBadge status={c.status} />} />
+      <PageHeader title={`الجرة ${isolate(c.label)}`} actions={<CylinderStatusBadge status={c.status} />} />
       <Card title="البيانات">
         <DetailList
           items={[
             ["المواطن", <Link key="c" className="text-primary hover:underline" href={`/d/citizens/${c.entitlement.citizen.id}`}>{c.entitlement.citizen.fullName}</Link>],
-            ["رقم الهوية", <bdi key="n">{c.entitlement.citizen.nationalId}</bdi>],
+            ["رقم الهوية", <bdi dir="ltr" key="n">{c.entitlement.citizen.nationalId}</bdi>],
             ["الدورة", c.entitlement.cycle.name],
-            ["رقم المواطن في الكشف", <bdi key="cn">{c.entitlement.citizenNumber}</bdi>],
+            ["رقم المواطن في الكشف", <bdi dir="ltr" key="cn">{c.entitlement.citizenNumber}</bdi>],
             ["جرة رقم", `${c.seq} من ${c.entitlement.quantity}`],
+            ["الوزن فارغة", emptyKg ? <bdi key="ew">{emptyKg.toFixed(2)} كغ</bdi> : "—"],
+            ["الوزن ممتلئة", fullKg ? <bdi key="fw">{fullKg.toFixed(2)} كغ</bdi> : "—"],
+            ["وزن الغاز", emptyKg && fullKg ? <bdi key="gw">{fullKg.sub(emptyKg).toFixed(2)} كغ</bdi> : "—"],
           ]}
         />
       </Card>
@@ -36,6 +41,7 @@ export default async function CylinderPage({ params }: { params: Promise<{ id: s
                 <span className="font-medium">
                   {OPERATION_LABELS[o.type]}
                   {o.shipment && <span className="text-muted"> — ضمن شحنة <Link className="text-primary hover:underline" href={`/d/shipments/${o.shipment.id}`}>{o.shipment.station.name}{o.shipment.reference ? ` (${o.shipment.reference})` : ""}</Link></span>}
+                  {o.weightKg && <span className="text-xs text-muted"> · الوزن: <bdi>{o.weightKg.toFixed(2)}</bdi> كغ</span>}
                   {o.identityMethod && <span className="text-xs text-muted"> · الهوية: {o.identityMethod === "ID_SCAN" ? "من صورة البطاقة" : "إدخال يدوي من البطاقة"}</span>}
                 </span>
                 {o.status === "CANCELLED" ? <Badge tone="danger">ملغاة</Badge> : <Badge tone="success">نافذة</Badge>}

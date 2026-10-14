@@ -44,6 +44,7 @@ export function Counter() {
   const [done, setDone] = useState("");
   const [deliverFor, setDeliverFor] = useState<Cyl | null>(null);
   const [payFor, setPayFor] = useState<Ent | null>(null);
+  const [emptyWeight, setEmptyWeight] = useState<Record<string, string>>({});
 
   const lookup = async (id = nid) => {
     setError("");
@@ -80,7 +81,14 @@ export function Counter() {
   };
 
   const receive = (e: Ent) =>
-    run(`receive-${e.id}`, (k) => api("POST", "/api/v1/operations/receive-empty", { clientOpId: k, entitlementId: e.id, nationalId: data?.nationalId, identityMethod: method }), "سُجل استلام الجرة الفارغة. اكتب رقمها على الجرة.");
+    run(
+      `receive-${e.id}`,
+      async (k) => {
+        await api("POST", "/api/v1/operations/receive-empty", { clientOpId: k, entitlementId: e.id, nationalId: data?.nationalId, identityMethod: method, weightKg: emptyWeight[e.id] || null });
+        setEmptyWeight((w) => ({ ...w, [e.id]: "" }));
+      },
+      "سُجل استلام الجرة الفارغة. اكتب رقمها على الجرة.",
+    );
 
   return (
     <div className="space-y-4">
@@ -123,14 +131,14 @@ export function Counter() {
         <>
           <Card title={data.citizen.fullName} actions={<Link href={`/d/citizens/${data.citizen.id}`} className="text-sm text-primary hover:underline">ملف المواطن</Link>}>
             <Alert tone="warning">تأكد أن صورة البطاقة تطابق الشخص الحاضر قبل أي عملية.</Alert>
-            <div className="mt-2 text-sm text-muted">الهوية: <bdi>{data.nationalId}</bdi>{data.citizen.phone && <> · الهاتف: <bdi>{data.citizen.phone}</bdi></>}</div>
+            <div className="mt-2 text-sm text-muted">الهوية: <bdi dir="ltr">{data.nationalId}</bdi>{data.citizen.phone && <> · الهاتف: <bdi dir="ltr">{data.citizen.phone}</bdi></>}</div>
             <div className="mt-1 text-sm">إجمالي المتبقي عبر الدورات: <strong>{formatMoney(data.totalRemaining)}</strong></div>
           </Card>
           {data.entitlements.length === 0 && <EmptyState>لا يوجد استحقاق في الدورة النشطة ولا جرار معلقة لهذا المواطن.</EmptyState>}
           {data.entitlements.map((e) => (
             <Card
               key={e.id}
-              title={<span>{e.cycle.name} — رقم المواطن <bdi className="text-primary">{e.citizenNumber}</bdi></span>}
+              title={<span>{e.cycle.name} — رقم المواطن <bdi dir="ltr" className="text-primary">{e.citizenNumber}</bdi></span>}
               actions={
                 <span className="flex gap-1">
                   {e.cycle.status !== "OPEN" && <Badge>دورة مغلقة</Badge>}
@@ -150,7 +158,7 @@ export function Counter() {
                   {e.cylinders.map((c) => (
                     <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                       <span className="flex items-center gap-2">
-                        <span className="text-lg font-bold"><bdi>{c.label}</bdi></span>
+                        <span className="text-lg font-bold"><bdi dir="ltr">{c.label}</bdi></span>
                         <CylinderStatusBadge status={c.status} />
                       </span>
                       {c.status === "FILLED" && (
@@ -161,7 +169,18 @@ export function Counter() {
                   ))}
                 </ul>
               )}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {e.canReceive && (
+                  <Input
+                    dir="ltr"
+                    inputMode="decimal"
+                    className="w-36 text-center"
+                    placeholder="الوزن فارغة (كغ)"
+                    aria-label="وزن الجرة فارغة بالكيلوغرام (اختياري)"
+                    value={emptyWeight[e.id] ?? ""}
+                    onChange={(ev) => setEmptyWeight((w) => ({ ...w, [e.id]: ev.target.value }))}
+                  />
+                )}
                 {e.canReceive && (
                   <Button variant="secondary" loading={busy === `receive-${e.id}`} onClick={() => receive(e)}>
                     <PackageOpen className="size-4" /> استلام جرة فارغة {e.quantity > 1 && `(${e.quantity - e.remaining + 1} من ${e.quantity})`}
@@ -197,10 +216,10 @@ export function Counter() {
           cylinder={deliverFor}
           busy={busy === `deliver-${deliverFor.id}`}
           onClose={() => setDeliverFor(null)}
-          onConfirm={(label) => {
+          onConfirm={(label, weightKg) => {
             const c = deliverFor;
             setDeliverFor(null);
-            run(`deliver-${c.id}`, (k) => api("POST", "/api/v1/operations/deliver", { clientOpId: k, cylinderId: c.id, cylinderLabel: label, nationalId: data.nationalId, identityMethod: method }), `سُلّمت الجرة ${isolate(c.label)}.`);
+            run(`deliver-${c.id}`, (k) => api("POST", "/api/v1/operations/deliver", { clientOpId: k, cylinderId: c.id, cylinderLabel: label, nationalId: data.nationalId, identityMethod: method, weightKg: weightKg || null }), `سُلّمت الجرة ${isolate(c.label)}.`);
           }}
         />
       )}
@@ -208,14 +227,18 @@ export function Counter() {
   );
 }
 
-function DeliverDialog({ cylinder, busy, onClose, onConfirm }: { cylinder: Cyl; busy: boolean; onClose: () => void; onConfirm: (label: string) => void }) {
+function DeliverDialog({ cylinder, busy, onClose, onConfirm }: { cylinder: Cyl; busy: boolean; onClose: () => void; onConfirm: (label: string, weightKg: string) => void }) {
   const [label, setLabel] = useState("");
+  const [weightKg, setWeightKg] = useState("");
   return (
     <Modal open onClose={onClose} title="تسليم جرة معبأة">
-      <form onSubmit={(e) => { e.preventDefault(); onConfirm(label); }} className="space-y-4">
+      <form onSubmit={(e) => { e.preventDefault(); onConfirm(label, weightKg); }} className="space-y-4">
         <Alert>اقرأ الرقم المكتوب على الجرة نفسها واكتبه هنا. يجب أن يطابق رقمها في النظام.</Alert>
         <Field label="الرقم المكتوب على الجرة" htmlFor="dl-label">
           <Input id="dl-label" dir="ltr" inputMode="numeric" className="text-center text-lg" value={label} onChange={(e) => setLabel(e.target.value)} autoFocus required />
+        </Field>
+        <Field label="وزن الجرة ممتلئة (كغ، اختياري)" htmlFor="dl-weight">
+          <Input id="dl-weight" dir="ltr" inputMode="decimal" className="text-center" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
         </Field>
         <p className="text-xs text-muted">التسليم مستقل عن الدفع.</p>
         <div className="flex justify-end gap-2">

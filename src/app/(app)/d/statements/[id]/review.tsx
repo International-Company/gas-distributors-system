@@ -16,20 +16,20 @@ export function MetaPanel({
   cycles,
   approved,
 }: {
-  statement: { id: string; title: string; cycleId: string | null; supersedesId: string | null };
+  statement: { id: string; title: string; cycleId: string | null; supersedesId: string | null; scaleNumber: string | null };
   cycles: { id: string; name: string; status: string }[];
   approved: { id: string; title: string; version: number; cycleId: string | null }[];
 }) {
   const api = useApi();
   const router = useRouter();
-  const [v, setV] = useState({ title: statement.title, cycleId: statement.cycleId ?? "", supersedesId: statement.supersedesId ?? "" });
+  const [v, setV] = useState({ title: statement.title, cycleId: statement.cycleId ?? "", supersedesId: statement.supersedesId ?? "", scaleNumber: statement.scaleNumber ?? "" });
   const [saved, setSaved] = useState(false);
   const { busy, error, submit } = useFormSubmit(
     () =>
       api("PATCH", `/api/v1/statements/${statement.id}`, {
         title: v.title,
         supersedesId: v.supersedesId || null,
-        ...(v.supersedesId ? {} : { cycleId: v.cycleId || null }),
+        ...(v.supersedesId ? {} : { cycleId: v.cycleId || null, scaleNumber: v.scaleNumber || null }),
       }),
     () => {
       setSaved(true);
@@ -38,9 +38,9 @@ export function MetaPanel({
   );
   return (
     <Card title="الدورة والإصدار">
-      <form onSubmit={submit} className="grid gap-4 md:grid-cols-3">
-        {error && <Alert tone="danger" className="md:col-span-3">{error}</Alert>}
-        {saved && <Alert tone="success" className="md:col-span-3">تم الحفظ وأُعيد التحقق من الصفوف.</Alert>}
+      <form onSubmit={submit} className="grid gap-4 md:grid-cols-4">
+        {error && <Alert tone="danger" className="md:col-span-4">{error}</Alert>}
+        {saved && <Alert tone="success" className="md:col-span-4">تم الحفظ وأُعيد التحقق من الصفوف.</Alert>}
         <Field label="العنوان" htmlFor="m-title">
           <Input id="m-title" value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} />
         </Field>
@@ -60,7 +60,21 @@ export function MetaPanel({
             ))}
           </Select>
         </Field>
-        <div className="md:col-span-3">
+        <Field
+          label="رقم الميزان"
+          htmlFor="m-scale"
+          hint={v.supersedesId ? "يتبع الإصدار السابق" : "يُضاف قبل المتسلسل: رقم المواطن «الميزان-المتسلسل»"}
+        >
+          <Input
+            id="m-scale"
+            dir="ltr"
+            inputMode="numeric"
+            value={v.scaleNumber}
+            onChange={(e) => setV({ ...v, scaleNumber: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+            disabled={!!v.supersedesId}
+          />
+        </Field>
+        <div className="md:col-span-4">
           <Button type="submit" variant="secondary" loading={busy}>حفظ</Button>
           {cycles.every((c) => c.status !== "OPEN") && (
             <a href="/d/cycles" className="ms-3 text-sm text-primary hover:underline">لا توجد دورة نشطة — ابدأ دورة جديدة</a>

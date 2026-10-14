@@ -136,9 +136,9 @@
 | الطريقة والمسار | الجسم | الوصف |
 |---|---|---|
 | `GET /counter/lookup` | `?nationalId=` | الشباك: المواطن واستحقاقاته العاملة وجراره |
-| `POST /operations/receive-empty` | `{clientOpId, entitlementId, nationalId, identityMethod}` | استلام جرة فارغة: +1 فارغ |
+| `POST /operations/receive-empty` | `{clientOpId, entitlementId, nationalId, identityMethod, weightKg?}` | استلام جرة فارغة: +1 فارغ |
 | `POST /operations/fill` | `{items:[{clientOpId, cylinderId}]}` | تعبئة فردية أو جماعية (كلها أو لا شيء): −1 فارغ +1 معبأ |
-| `POST /operations/deliver` | `{clientOpId, cylinderId, cylinderLabel, nationalId, identityMethod}` | تسليم: −1 معبأ |
+| `POST /operations/deliver` | `{clientOpId, cylinderId, cylinderLabel, nationalId, identityMethod, weightKg?}` | تسليم: −1 معبأ |
 | `POST /operations/:id/cancel` | `{reason}` | إلغاء آخر عملية نافذة على الجرة، مع عكس أثرها مرة واحدة |
 | `GET /cylinders` | `?status=EMPTY\|FILLED\|DELIVERED\|VOID&cycleId=&q=&page=&pageSize=` | قائمة الجرار |
 | `GET /cylinders/:id` | — | الجرة وسجل عملياتها |
@@ -195,3 +195,13 @@
 مفاتيح التقارير: `citizens-sheet` (`cycleId, state`)، `not-delivered` (`cycleId`)، `unpaid` (`cycleId?`)، `empty-not-filled` و `filled-not-delivered` (`cycleId?`)، `operations-period` (`from, to, type`)، `cycles-comparison`، `collections` (`cycleId?, from, to`)، `expenses` و `cash-box` و `inventory` (`from, to`)، `stations`، `statements` (`cycleId?`). التواريخ `YYYY-MM-DD` بتوقيت غزة.
 
 الطباعة وحفظ PDF: صفحات `/print/reports/:key` و `/print/central` بالفلاتر نفسها، تفتح نافذة الطباعة في المتصفح.
+
+---
+
+# رقم الميزان والأوزان
+
+- `PATCH /statements/:id` يقبل أيضًا `scaleNumber`: أرقام فقط، أو `null` للإزالة. تغييره يعيد بناء أرقام المواطنين في الصفوف إلى «الميزان-المتسلسل» ثم يعيد التحقق. يُرفض تغييره في تحديث لكشف معتمد.
+- `weightKg` في الاستلام والتسليم اختياري:
+  - بالكيلوغرام، أكبر من 0 وأقل من 100، بمنزلتين عشريتين على الأكثر.
+  - يقبل الأرقام العربية والفاصلة العشرية.
+  - وزن التسليم يجب أن يزيد على وزن الاستلام إن سُجل.

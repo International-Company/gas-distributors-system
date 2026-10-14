@@ -9,7 +9,7 @@ import { cleanText, normalizeName, normalizePhone } from "@/lib/arabic";
 import { isValidNationalId, normalizeNationalId } from "@/lib/national-id";
 import { itemsToTable, type TextItem } from "@/lib/table-from-items";
 import {
-  applyMapping, detectMapping, extractStatementMeta, FIELDS, markDuplicates, REQUIRED_FIELDS, severityOf, suggestCycleFromText,
+  applyMapping, detectMapping, extractStatementMeta, FIELDS, markDuplicates, REQUIRED_FIELDS, rescale, severityOf, suggestCycleFromText, withScale,
   type ColumnMapping, type ParsedRow, type RawTable, type RowIssue,
 } from "../statements/mapping";
 import { detectKind, extractExcel, extractPdf, looksLikeHeader, type Extraction } from "../statements/extract";
@@ -44,7 +44,7 @@ function assertPending(st: Statement) {
 const effectiveAmount = (row: { amount: Prisma.Decimal | null; quantity: number | null }, unitPrice: Prisma.Decimal) =>
   row.amount ?? unitPrice.mul(row.quantity ?? 0);
 
-async function replaceRows(tx: Tx, actor: DistributorActor, statementId: string, rows: ParsedRow[]) {
+async function replaceRows(tx: Tx, actor: DistributorActor, statementId: string, rows: ParsedRow[], scaleNumber: string | null) {
   await tx.statementRow.deleteMany({ where: { statementId } });
   if (!rows.length) return;
   await tx.statementRow.createMany({
@@ -55,7 +55,7 @@ async function replaceRows(tx: Tx, actor: DistributorActor, statementId: string,
       nationalId: r.nationalId,
       fullName: r.fullName,
       phone: r.phone,
-      citizenNumber: r.citizenNumber,
+      citizenNumber: withScale(scaleNumber, r.citizenNumber),
       quantity: r.quantity,
       amount: r.amount === null ? null : new Prisma.Decimal(r.amount),
       issues: r.issues as unknown as Prisma.InputJsonValue,
@@ -209,6 +209,8 @@ export async function uploadStatement(actor: Actor, file: { name: string; mime: 
     if (ex.table.length && missing.length) notes.push("تعذر تحديد بعض الأعمدة تلقائيًا؛ حددها يدويًا في شاشة المراجعة");
 
     const meta = extractStatementMeta(ex.text.slice(0, 2000));
+    // تحديث كشف سابق يُبقي رقم ميزانه، فلا تتغير أرقام المواطنين المكتوبة على الجرار.
+    const scaleNumber = supersedes ? supersedes.scaleNumber : meta.scaleNumber;
     const autoTitle = meta.date || meta.scaleNumber
       ? `كشف${meta.date ? ` ${meta.date}` : ""}${meta.scaleNumber ? ` — ميزان ${meta.scaleNumber}` : ""}`
       : file.name.replace(/\.[^.]+$/, "");
@@ -216,6 +218,7 @@ export async function uploadStatement(actor: Actor, file: { name: string; mime: 
       data: {
         distributorId: actor.distributorId,
         title: m.title || autoTitle,
+        scaleNumber,
         cycleId: supersedes?.cycleId ?? active?.id ?? null,
         supersedesId: supersedes?.id ?? null,
         version: supersedes ? supersedes.version + 1 : 1,
@@ -231,7 +234,7 @@ export async function uploadStatement(actor: Actor, file: { name: string; mime: 
       include: { cycle: true },
     });
     if (ex.table.length) {
-      await replaceRows(tx, actor, st.id, applyMapping(ex.table, headerRow, mapping));
+      await replaceRows(tx, actor, st.id, applyMapping(ex.table, headerRow, mapping), st.scaleNumber);
       await revalidate(tx, st);
     }
     await log(tx, actor, "import", st.id, { title: st.title, file: file.name, size: file.data.length, method: ex.method, needsOcr: ex.needsOcr, duplicateOf: dups.map((d) => d.id) });
@@ -266,10 +269,12 @@ export async function submitOcr(actor: Actor, statementId: string, input: unknow
     const rows = applyMapping(table, headerRow, mapping);
     for (const r of rows) r.issues.push({ code: "OCR_REVIEW", message: "مقروء ضوئيًا: تحقق من القيم مقابل الملف الأصلي", severity: "WARNING" });
     const extraction = { ...((st.extraction as object) ?? {}), needsOcr: false, ocrConfidence: v.confidence ?? null };
+    const scaleNumber = st.scaleNumber ?? (st.supersedesId ? null : extractStatementMeta(v.items.slice(0, 400).map((i) => i.text).join(" ")).scaleNumber);
     const updated = await tx.statement.update({
       where: { id: st.id },
       data: {
         parseMethod: "PDF_OCR",
+        scaleNumber,
         rawTable: table as unknown as Prisma.InputJsonValue,
         headerRow,
         columnMapping: mapping as Prisma.InputJsonValue,
@@ -278,7 +283,7 @@ export async function submitOcr(actor: Actor, statementId: string, input: unknow
       },
       include: { cycle: true },
     });
-    await replaceRows(tx, actor, st.id, rows);
+    await replaceRows(tx, actor, st.id, rows, updated.scaleNumber);
     await revalidate(tx, updated);
     await log(tx, actor, "ocr", st.id, { rows: rows.length, confidence: v.confidence });
     return { rows: rows.length };
@@ -307,7 +312,7 @@ export async function updateMapping(actor: Actor, statementId: string, input: un
     const used = Object.values(mapping).filter((c) => c !== null && c !== undefined);
     if (new Set(used).size !== used.length) throw new AppError("VALIDATION", "لا يمكن ربط عمود واحد بأكثر من حقل");
     const updated = await tx.statement.update({ where: { id: st.id }, data: { headerRow: v.headerRow, columnMapping: mapping as Prisma.InputJsonValue }, include: { cycle: true } });
-    await replaceRows(tx, actor, st.id, applyMapping(table, v.headerRow, mapping));
+    await replaceRows(tx, actor, st.id, applyMapping(table, v.headerRow, mapping), st.scaleNumber);
     await revalidate(tx, updated);
     await log(tx, actor, "remap", st.id, v, { headerRow: st.headerRow, mapping: st.columnMapping });
   }, { timeout: 60_000 });
@@ -336,7 +341,7 @@ export async function updateRow(actor: Actor, statementId: string, rowId: string
     if (v.nationalId !== undefined) data.nationalId = normalizeNationalId(v.nationalId);
     if (v.fullName !== undefined) data.fullName = cleanText(v.fullName) || null;
     if (v.phone !== undefined) data.phone = normalizePhone(v.phone);
-    if (v.citizenNumber !== undefined) data.citizenNumber = cleanText(v.citizenNumber) || null;
+    if (v.citizenNumber !== undefined) data.citizenNumber = withScale(st.scaleNumber, cleanText(v.citizenNumber) || null);
     if (v.quantity !== undefined) data.quantity = v.quantity;
     if (v.amount !== undefined) {
       const a = v.amount === null || v.amount === "" ? null : String(v.amount).replace(/[٫,]/g, ".");
@@ -356,6 +361,7 @@ const metaSchema = z.object({
   title: z.string().trim().min(1).max(150).optional(),
   cycleId: z.string().uuid().nullable().optional(),
   supersedesId: z.string().uuid().nullable().optional(),
+  scaleNumber: z.string().trim().regex(/^\d{1,6}$/, "رقم الميزان أرقام فقط").nullable().optional().or(z.literal("").transform(() => null)),
 });
 
 /** تحديد الدورة (أو الإصدار السابق) للكشف قبل اعتماده. */
@@ -372,6 +378,7 @@ export async function updateStatementMeta(actor: Actor, statementId: string, inp
         const prev = await tx.statement.findUnique({ where: { id: v.supersedesId } });
         if (!prev || prev.status !== "APPROVED") throw new AppError("VALIDATION", "الكشف السابق غير موجود أو غير معتمد");
         data.supersedesId = prev.id;
+        data.scaleNumber = prev.scaleNumber; // أرقام المواطنين تبقى كما في الإصدار السابق
         data.version = prev.version + 1;
         data.cycleId = prev.cycleId; // الإصدار الجديد يتبع دورة الإصدار السابق
       } else {
@@ -383,9 +390,26 @@ export async function updateStatementMeta(actor: Actor, statementId: string, inp
       if (v.cycleId && !(await tx.cycle.findUnique({ where: { id: v.cycleId } }))) throw notFound("الدورة");
       data.cycleId = v.cycleId;
     }
+    if (v.scaleNumber !== undefined && data.scaleNumber === undefined) {
+      if (st.supersedesId && v.supersedesId !== null && v.scaleNumber !== st.scaleNumber) throw new AppError("VALIDATION", "رقم الميزان يتبع الإصدار السابق ولا يتغير عند تحديث كشف");
+      data.scaleNumber = v.scaleNumber;
+    }
     const updated = await tx.statement.update({ where: { id: st.id }, data, include: { cycle: true } });
+    if (updated.scaleNumber !== st.scaleNumber) {
+      // إعادة بناء أرقام المواطنين في الصفوف برقم الميزان الجديد.
+      const rows = await tx.statementRow.findMany({ where: { statementId: st.id }, select: { id: true, citizenNumber: true } });
+      const payload = rows
+        .map((r) => ({ id: r.id, n: rescale(st.scaleNumber, updated.scaleNumber, r.citizenNumber) }))
+        .filter((r, i) => r.n !== rows[i].citizenNumber);
+      if (payload.length) {
+        await tx.$executeRaw`
+          UPDATE "statement_rows" AS r SET "citizenNumber" = v.n
+          FROM jsonb_to_recordset(${JSON.stringify(payload)}::jsonb) AS v(id uuid, n text)
+          WHERE r."id" = v.id`;
+      }
+    }
     await revalidate(tx, updated);
-    await log(tx, actor, "meta", st.id, { title: updated.title, cycleId: updated.cycleId, supersedesId: updated.supersedesId }, { title: st.title, cycleId: st.cycleId, supersedesId: st.supersedesId });
+    await log(tx, actor, "meta", st.id, { title: updated.title, cycleId: updated.cycleId, supersedesId: updated.supersedesId, scaleNumber: updated.scaleNumber }, { title: st.title, cycleId: st.cycleId, supersedesId: st.supersedesId, scaleNumber: st.scaleNumber });
     return updated;
   }, { timeout: 60_000 });
 }

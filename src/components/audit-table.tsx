@@ -78,10 +78,10 @@ export function AuditTable({ rows }: { rows: Row[] }) {
             بواسطة:{" "}
             {r.actor ? (
               <>
-                {r.actor.displayName} (<bdi>{r.actor.username}</bdi>)
+                {r.actor.displayName} (<bdi dir="ltr">{r.actor.username}</bdi>)
               </>
             ) : r.actorRole === "SYSTEM" ? "النظام" : "—"}
-            {r.ip && <> · <bdi>{r.ip}</bdi></>}
+            {r.ip && <> · <bdi dir="ltr">{r.ip}</bdi></>}
           </div>
           {r.reason && <div className="mt-1 text-sm">السبب: {r.reason}</div>}
           <Diff before={r.before} after={r.after} />

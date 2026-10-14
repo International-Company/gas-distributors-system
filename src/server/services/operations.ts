@@ -29,6 +29,20 @@ const identity = {
   identityMethod: z.enum(["MANUAL_ENTRY", "ID_SCAN"]).default("MANUAL_ENTRY"),
 };
 
+/** الوزن بالكيلوغرام (اختياري): يقبل الأرقام العربية والفاصلة العشرية. */
+const weight = z
+  .union([z.string(), z.number(), z.null()])
+  .optional()
+  .transform((x, ctx) => {
+    if (x === null || x === undefined || String(x).trim() === "") return null;
+    const t = normalizeDigits(String(x)).trim().replace(/[٫,]/g, ".");
+    if (!/^\d{1,2}(\.\d{1,2})?$/.test(t) || Number(t) <= 0) {
+      ctx.addIssue({ code: "custom", message: "الوزن غير صالح (كيلوغرام، أقل من 100)", path: [] });
+      return z.NEVER;
+    }
+    return new Prisma.Decimal(t);
+  });
+
 async function lockRow(tx: Tx, table: "cylinders" | "entitlements", id: string) {
   const q = table === "cylinders"
     ? tx.$queryRaw<{ id: string }[]>`SELECT "id" FROM "cylinders" WHERE "id" = ${id}::uuid FOR UPDATE`
@@ -119,7 +133,7 @@ async function replayAfterLock(tx: Tx, actor: DistributorActor, key: string, typ
 // استلام الجرة الفارغة
 // ---------------------------------------------------------------------------
 
-const receiveSchema = z.object({ clientOpId: opKey, entitlementId: z.string().uuid(), ...identity });
+const receiveSchema = z.object({ clientOpId: opKey, entitlementId: z.string().uuid(), ...identity, weightKg: weight });
 
 /**
  * استلام جرة فارغة: تحقق الهوية، استحقاق قائم في كشف معتمد، الدورة نشطة، وجرة غير مستلمة بعد.
@@ -150,7 +164,7 @@ export async function receiveEmpty(actor: Actor, input: unknown) {
           data: { distributorId: actor.distributorId, cycleId: e.cycleId, entitlementId: e.id, seq, label: cylinderLabel(e.citizenNumber, e.quantity, seq), status: "EMPTY" },
         });
         const op = await tx.cylinderOperation.create({
-          data: { distributorId: actor.distributorId, cylinderId: cylinder.id, type: "RECEIVE_EMPTY", idempotencyKey: v.clientOpId, identityMethod: v.identityMethod, userId: actor.userId },
+          data: { distributorId: actor.distributorId, cylinderId: cylinder.id, type: "RECEIVE_EMPTY", idempotencyKey: v.clientOpId, identityMethod: v.identityMethod, weightKg: v.weightKg, userId: actor.userId },
         });
         await recordMovement(tx, actor, { type: "RECEIVE_EMPTY", delta: { empty: 1 }, operationId: op.id });
         return result({ ...op, cylinder }, false);
@@ -219,6 +233,7 @@ const deliverSchema = z.object({
   cylinderId: z.string().uuid(),
   cylinderLabel: z.string().trim().min(1, "أدخل الرقم المكتوب على الجرة"),
   ...identity,
+  weightKg: weight,
 });
 
 /**
@@ -242,8 +257,14 @@ export async function deliverCylinder(actor: Actor, input: unknown) {
         if (!["APPROVED", "SUPERSEDED"].includes(c.entitlement.statement.status)) throw new AppError("INVALID_STATE", "الكشف غير معتمد");
         if (c.status === "DELIVERED") throw new AppError("INVALID_STATE", "سُلّمت هذه الجرة سابقًا");
         if (c.status !== "FILLED") throw new AppError("INVALID_STATE", "الجرة غير جاهزة للتسليم (لم تُعبأ بعد)");
+        if (v.weightKg) {
+          const received = await tx.cylinderOperation.findFirst({ where: { cylinderId: c.id, type: "RECEIVE_EMPTY", status: "ACTIVE" }, select: { weightKg: true } });
+          if (received?.weightKg && v.weightKg.lte(received.weightKg)) {
+            throw new AppError("VALIDATION", `وزن الجرة ممتلئة يجب أن يزيد على وزنها فارغة (${received.weightKg.toFixed(2)} كغ)`, { weightKg: "الوزن أقل من وزن الفارغة" });
+          }
+        }
         const op = await tx.cylinderOperation.create({
-          data: { distributorId: actor.distributorId, cylinderId: c.id, type: "DELIVER", idempotencyKey: v.clientOpId, identityMethod: v.identityMethod, userId: actor.userId },
+          data: { distributorId: actor.distributorId, cylinderId: c.id, type: "DELIVER", idempotencyKey: v.clientOpId, identityMethod: v.identityMethod, weightKg: v.weightKg, userId: actor.userId },
         });
         const updated = await tx.cylinder.update({ where: { id: c.id }, data: { status: "DELIVERED" } });
         await recordMovement(tx, actor, { type: "DELIVER", delta: { filled: -1 }, operationId: op.id });

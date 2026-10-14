@@ -82,7 +82,7 @@ export function NewShipment({ stations, empties, emptiesTotal }: { stations: { i
                 <li key={c.id}>
                   <label className="flex cursor-pointer items-center gap-3 px-3 py-1.5 text-sm hover:bg-surface-2">
                     <input type="checkbox" className="size-4" checked={sel.has(c.id)} onChange={() => toggle(c.id)} />
-                    <bdi className="min-w-16 font-semibold">{c.label}</bdi>
+                    <bdi dir="ltr" className="min-w-16 font-semibold">{c.label}</bdi>
                     <span className="flex-1">{c.name}</span>
                     <span className="text-xs text-muted">{c.cycleName}</span>
                   </label>

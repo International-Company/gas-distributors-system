@@ -39,26 +39,26 @@ enum AuthMethod {
 }
 
 model User {
-  id                String     @id @default(uuid()) @db.Uuid
-  username          String     @unique // يخزن بأحرف صغيرة دائمًا
-  passwordHash      String
-  role              UserRole
-  status            UserStatus @default(ACTIVE)
-  displayName       String
-  phone             String?
+  id                 String       @id @default(uuid()) @db.Uuid
+  username           String       @unique // يخزن بأحرف صغيرة دائمًا
+  passwordHash       String
+  role               UserRole
+  status             UserStatus   @default(ACTIVE)
+  displayName        String
+  phone              String?
   // لمديري النظام فقط
-  isSuperAdmin      Boolean    @default(false)
-  permissions       String[]   @default([])
+  isSuperAdmin       Boolean      @default(false)
+  permissions        String[]     @default([])
   // للموزّع: الحساب التابع له
-  distributorId     String?    @unique @db.Uuid
-  distributor       Distributor? @relation(fields: [distributorId], references: [id])
-  failedLoginCount  Int        @default(0)
-  lockedUntil       DateTime?
-  mustChangePassword Boolean   @default(false)
-  passwordChangedAt DateTime   @default(now())
-  lastLoginAt       DateTime?
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  distributorId      String?      @unique @db.Uuid
+  distributor        Distributor? @relation(fields: [distributorId], references: [id])
+  failedLoginCount   Int          @default(0)
+  lockedUntil        DateTime?
+  mustChangePassword Boolean      @default(false)
+  passwordChangedAt  DateTime     @default(now())
+  lastLoginAt        DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   sessions   Session[]
   devicePins DevicePin[]
@@ -76,32 +76,32 @@ model DistributorCategory {
 }
 
 model Distributor {
-  id               String            @id @default(uuid()) @db.Uuid
+  id               String               @id @default(uuid()) @db.Uuid
   name             String
   phone            String
   region           String
-  status           DistributorStatus @default(ACTIVE)
+  status           DistributorStatus    @default(ACTIVE)
   suspensionReason SuspensionReason?
-  statusChangedAt  DateTime          @default(now())
-  isTrial          Boolean           @default(false)
+  statusChangedAt  DateTime             @default(now())
+  isTrial          Boolean              @default(false)
   // null = بلا مدة محددة
   expiresAt        DateTime?
-  isPinned         Boolean           @default(false)
-  categoryId       String?           @db.Uuid
+  isPinned         Boolean              @default(false)
+  categoryId       String?              @db.Uuid
   category         DistributorCategory? @relation(fields: [categoryId], references: [id])
   archivedAt       DateTime?
-  createdById      String?           @db.Uuid
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  createdById      String?              @db.Uuid
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
   user User?
 
-  cycles        Cycle[]
-  statements    Statement[]
-  citizens      Citizen[]
-  entitlements  Entitlement[]
-  storedFiles   StoredFile[]
-  reviewCases   ReviewCase[]
+  cycles       Cycle[]
+  statements   Statement[]
+  citizens     Citizen[]
+  entitlements Entitlement[]
+  storedFiles  StoredFile[]
+  reviewCases  ReviewCase[]
 
   @@index([status])
   @@index([expiresAt])
@@ -210,14 +210,14 @@ model SystemSettings {
 }
 
 model ErrorLog {
-  id        BigInt   @id @default(autoincrement())
-  at        DateTime @default(now())
-  level     String
-  message   String
-  stack     String?
-  route     String?
-  userId    String?  @db.Uuid
-  context   Json?
+  id      BigInt   @id @default(autoincrement())
+  at      DateTime @default(now())
+  level   String
+  message String
+  stack   String?
+  route   String?
+  userId  String?  @db.Uuid
+  context Json?
 
   @@index([at])
   @@map("error_logs")
@@ -334,6 +334,9 @@ model Statement {
   cycleId        String?         @db.Uuid
   cycle          Cycle?          @relation(fields: [cycleId], references: [id])
   title          String
+  // رقم الميزان من رأس كشف الهيئة. الدورة قد تضم عدة كشوف يبدأ تسلسل كل منها من 1،
+  // فيصبح رقم المواطن «الميزان-المتسلسل» (295-17) ليبقى فريدًا داخل الدورة.
+  scaleNumber    String?
   status         StatementStatus @default(PENDING_REVIEW)
   // الإصدار المعتمد السابق الذي يحل محله هذا الكشف عند التحديث.
   supersedesId   String?         @db.Uuid
@@ -564,21 +567,23 @@ enum IdentityMethod {
 }
 
 model CylinderOperation {
-  id             String           @id @default(uuid()) @db.Uuid
-  distributorId  String           @db.Uuid
-  cylinderId     String           @db.Uuid
-  cylinder       Cylinder         @relation(fields: [cylinderId], references: [id])
+  id             String          @id @default(uuid()) @db.Uuid
+  distributorId  String          @db.Uuid
+  cylinderId     String          @db.Uuid
+  cylinder       Cylinder        @relation(fields: [cylinderId], references: [id])
   type           OperationType
-  status         OperationStatus  @default(ACTIVE)
+  status         OperationStatus @default(ACTIVE)
   // معرّف يولده الجهاز لكل عملية؛ إعادة الإرسال بالمعرّف نفسه لا تنفذ العملية مرتين.
   idempotencyKey String
-  shipmentId     String?          @db.Uuid
-  shipment       Shipment?        @relation(fields: [shipmentId], references: [id])
+  shipmentId     String?         @db.Uuid
+  shipment       Shipment?       @relation(fields: [shipmentId], references: [id])
   identityMethod IdentityMethod?
-  userId         String           @db.Uuid
-  at             DateTime         @default(now())
+  // الوزن بالكيلوغرام (اختياري): وزن الجرة فارغة عند الاستلام، وممتلئة عند التسليم.
+  weightKg       Decimal?        @db.Decimal(5, 2)
+  userId         String          @db.Uuid
+  at             DateTime        @default(now())
   cancelledAt    DateTime?
-  cancelledById  String?          @db.Uuid
+  cancelledById  String?         @db.Uuid
   cancelReason   String?
 
   @@unique([distributorId, idempotencyKey])
@@ -587,15 +592,15 @@ model CylinderOperation {
 }
 
 model Station {
-  id            String     @id @default(uuid()) @db.Uuid
-  distributorId String     @db.Uuid
-  name          String
-  phone         String?
-  notes         String?
+  id               String   @id @default(uuid()) @db.Uuid
+  distributorId    String   @db.Uuid
+  name             String
+  phone            String?
+  notes            String?
   // سعر شراء الجرة الافتراضي من المحطة؛ يُقترح عند تسجيل الشحنة ويمكن تعديله لها.
   defaultUnitPrice Decimal? @db.Decimal(12, 2)
-  active        Boolean    @default(true)
-  createdAt     DateTime   @default(now())
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
 
   shipments Shipment[]
   payments  StationPayment[]

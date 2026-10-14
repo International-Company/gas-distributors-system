@@ -64,7 +64,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                     <td className="py-2">{formatDateTime(m.at)}</td>
                     <td className="py-2">{MOVEMENT_LABELS[m.type]}{m.note && <div className="text-xs text-muted">{m.note}</div>}</td>
                     <td className="py-2">
-                      {m.cylinder && <Link className="text-primary hover:underline" href={`/d/cylinders/${m.cylinder.id}`}><bdi>{m.cylinder.label}</bdi></Link>}
+                      {m.cylinder && <Link className="text-primary hover:underline" href={`/d/cylinders/${m.cylinder.id}`}><bdi dir="ltr">{m.cylinder.label}</bdi></Link>}
                       {!m.cylinder && m.shipmentId && <Link className="text-primary hover:underline" href={`/d/shipments/${m.shipmentId}`}>شحنة</Link>}
                     </td>
                     <td className="py-2 ltr-nums">{signed(m.emptyDelta)}</td>
