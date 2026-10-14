@@ -2,7 +2,7 @@ import type { Actor } from "@/server/actor";
 import { hasPermission } from "@/server/actor";
 import type { AdminPermission } from "@/server/permissions";
 
-export type NavIcon = "home" | "users" | "tags" | "shield" | "history" | "login" | "bug" | "settings" | "user" | "calendar" | "file" | "search" | "merge" | "alert";
+export type NavIcon = "home" | "users" | "tags" | "shield" | "history" | "login" | "bug" | "settings" | "user" | "calendar" | "file" | "search" | "merge" | "alert" | "counter" | "cylinder" | "truck" | "warehouse" | "factory";
 export type NavItem = { href: string; label: string; icon: NavIcon };
 
 type Def = NavItem & { permission?: AdminPermission; superAdmin?: boolean };
@@ -21,9 +21,14 @@ const ADMIN_NAV: Def[] = [
 
 const DISTRIBUTOR_NAV: Def[] = [
   { href: "/d", label: "الرئيسية", icon: "home" },
+  { href: "/d/counter", label: "الشباك", icon: "counter" },
   { href: "/d/citizens", label: "المواطنون", icon: "search" },
+  { href: "/d/cylinders", label: "الجرار", icon: "cylinder" },
+  { href: "/d/shipments", label: "الشحنات", icon: "truck" },
+  { href: "/d/inventory", label: "المخزون", icon: "warehouse" },
   { href: "/d/statements", label: "الكشوف", icon: "file" },
   { href: "/d/cycles", label: "الدورات", icon: "calendar" },
+  { href: "/d/stations", label: "المحطات", icon: "factory" },
   { href: "/d/review-cases", label: "حالات المراجعة", icon: "alert" },
   { href: "/d/merge", label: "اقتراحات الدمج", icon: "merge" },
   { href: "/account", label: "حسابي", icon: "user" },

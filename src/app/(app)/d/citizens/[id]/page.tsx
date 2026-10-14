@@ -4,6 +4,7 @@ import { getCitizenProfile } from "@/server/services/citizens";
 import { Alert, Badge, Card, DetailList, EmptyState, PageHeader } from "@/components/ui";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { CitizenActions, EditEntitlement } from "./actions";
+import { CylinderStatusBadge } from "@/components/cylinder-status";
 
 export const metadata = { title: "ملف مواطن" };
 
@@ -13,6 +14,12 @@ const TIMELINE: Record<string, string> = {
   CHANGE_MANUAL_EDIT: "تعديل يدوي",
   CHANGE_MERGE: "دمج سجل",
   CHANGE_REMOVED: "أُزيل من إصدار جديد للكشف",
+  OP_RECEIVE_EMPTY: "استلام جرة فارغة",
+  OP_FILL: "تعبئة",
+  OP_DELIVER: "تسليم جرة معبأة",
+  OP_RECEIVE_EMPTY_CANCELLED: "استلام فارغة (أُلغي)",
+  OP_FILL_CANCELLED: "تعبئة (أُلغيت)",
+  OP_DELIVER_CANCELLED: "تسليم (أُلغي)",
 };
 
 export default async function CitizenPage({ params }: { params: Promise<{ id: string }> }) {
@@ -38,7 +45,7 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
             ...(p.mergedFrom.length ? ([["سجلات مدموجة فيه", p.mergedFrom.map((m) => `${m.fullName} (${m.nationalId})`).join("، ")]] as [string, string][]) : []),
           ]}
         />
-        <p className="mt-3 text-xs text-muted">المدفوع والمتبقي يظهران مع نظام التحصيل (المرحلة 4)، وحالات الجرار مع المرحلة 3.</p>
+        <p className="mt-3 text-xs text-muted">المدفوع والمتبقي يظهران مع نظام التحصيل (المرحلة 4).</p>
       </Card>
 
       <Card title="الاستحقاقات حسب الدورة">
@@ -46,13 +53,14 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
           <EmptyState>لا توجد استحقاقات.</EmptyState>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[820px] text-sm">
               <thead className="text-right text-xs text-muted">
                 <tr className="border-b border-border">
                   <th className="py-2 font-medium">الدورة</th>
                   <th className="py-2 font-medium">رقم المواطن</th>
                   <th className="py-2 font-medium">الجرار</th>
                   <th className="py-2 font-medium">المطلوب</th>
+                  <th className="py-2 font-medium">الجرار</th>
                   <th className="py-2 font-medium">الكشف</th>
                   <th className="py-2 font-medium">الحالة</th>
                   <th className="py-2" />
@@ -65,6 +73,14 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
                     <td className="py-2 font-semibold"><bdi>{e.citizenNumber}</bdi></td>
                     <td className="py-2">{e.quantity}</td>
                     <td className="py-2">{formatMoney(e.amountDue)} <span className="text-xs text-muted">{e.amountSource === "AUTHORITY" ? "(من الكشف)" : "(محسوب)"}</span></td>
+                    <td className="py-2">
+                      <div className="flex flex-wrap gap-1">
+                        {e.cylinders.filter((c) => c.status !== "VOID").map((c) => (
+                          <Link key={c.id} href={`/d/cylinders/${c.id}`} className="inline-flex items-center gap-1"><bdi className="text-xs font-semibold">{c.label}</bdi><CylinderStatusBadge status={c.status} /></Link>
+                        ))}
+                        {e.cylinders.filter((c) => c.status !== "VOID").length === 0 && <span className="text-xs text-muted">لم تُستلم</span>}
+                      </div>
+                    </td>
                     <td className="py-2"><Link className="text-primary hover:underline" href={`/d/statements/${e.statement.id}`}>{e.statement.title}</Link></td>
                     <td className="py-2">{e.status === "ACTIVE" ? <Badge tone="success">قائم</Badge> : <Badge tone="danger">أُزيل من الكشف</Badge>}</td>
                     <td className="py-2">

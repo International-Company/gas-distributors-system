@@ -13,10 +13,17 @@ export async function distributorOverview(actor: Actor) {
       tx.reviewCase.count({ where: { status: "OPEN" } }),
     ]);
     const st = (s: string) => statements.find((x) => x.status === s)?._count._all ?? 0;
+    const states = cycle ? await tx.cylinder.groupBy({ by: ["status"], where: { cycleId: cycle.id, status: { not: "VOID" } }, _count: { _all: true } }) : [];
+    const n = (s: string) => states.find((x) => x.status === s)?._count._all ?? 0;
+    const receivedActive = cycle ? await tx.cylinder.count({ where: { cycleId: cycle.id, status: { not: "VOID" }, entitlement: { status: "ACTIVE" } } }) : 0;
+    const balance = await tx.inventoryBalance.findUnique({ where: { distributorId: actor.distributorId } });
     return {
       cycle,
       citizens: agg?._count._all ?? 0,
       cylinders: agg?._sum.quantity ?? 0,
+      // جرار الدورة النشطة حسب حالتها، والمنتظرة = المستحقة التي لم تُستلم فارغة بعد.
+      cycleCylinders: { empty: n("EMPTY"), filled: n("FILLED"), delivered: n("DELIVERED"), waiting: Math.max(0, (agg?._sum.quantity ?? 0) - receivedActive) },
+      stock: { empty: balance?.empty ?? 0, filled: balance?.filled ?? 0, extra: balance?.extra ?? 0 },
       pendingStatements: st("PENDING_REVIEW"),
       approvedStatements: st("APPROVED"),
       openCases,

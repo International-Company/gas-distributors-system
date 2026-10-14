@@ -7,7 +7,8 @@ export type ErrorCode =
   | "VALIDATION"
   | "CONFLICT"
   | "RATE_LIMITED"
-  | "INVALID_STATE";
+  | "INVALID_STATE"
+  | "IDENTITY_MISMATCH";
 
 const STATUS: Record<ErrorCode, number> = {
   UNAUTHENTICATED: 401,
@@ -19,6 +20,7 @@ const STATUS: Record<ErrorCode, number> = {
   CONFLICT: 409,
   RATE_LIMITED: 429,
   INVALID_STATE: 409,
+  IDENTITY_MISMATCH: 409,
 };
 
 /** خطأ متوقع برسالة عربية آمنة للعرض على المستخدم. */

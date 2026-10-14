@@ -33,7 +33,12 @@ export default async function CyclePage({ params }: { params: Promise<{ id: stri
             ["استحقاقات أُزيلت بتحديث الكشف", s.removedEntitlements],
           ]}
         />
-        <p className="mt-3 text-xs text-muted">ملخصات استلام الجرار والتعبئة والتسليم والتحصيل تُضاف مع مراحلها.</p>
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <Stat label="فارغة لم تُعبأ" value={s.cylinderStates.empty} tone={s.cylinderStates.empty ? "warning" : "neutral"} />
+          <Stat label="معبأة لم تُسلّم" value={s.cylinderStates.filled} tone={s.cylinderStates.filled ? "primary" : "neutral"} />
+          <Stat label="مسلّمة" value={s.cylinderStates.delivered} tone="success" />
+        </div>
+        <p className="mt-3 text-xs text-muted">إغلاق الدورة لا يلغي الجرار المعلقة: يمكن تعبئتها وتسليمها بعد الإغلاق، ولا تُستلم جرار جديدة فيها. ملخص التحصيل يُضاف مع المرحلة 4.</p>
       </Card>
       <CycleActions cycle={{ id: c.id, status: c.status, unitPrice: c.unitPrice.toString() }} pendingStatements={s.pendingStatements} />
       <Card title="كشوف الدورة">

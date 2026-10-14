@@ -439,7 +439,8 @@ model Entitlement {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
-  changes EntitlementChange[]
+  changes   EntitlementChange[]
+  cylinders Cylinder[]
 
   @@index([distributorId, citizenNumber])
   @@index([citizenId])
@@ -478,6 +479,7 @@ model MergeDismissal {
 
 enum ReviewCaseType {
   NOT_IN_STATEMENT
+  IDENTITY_MISMATCH // تعذر التحقق من الهوية عند استلام أو تسليم
 }
 
 enum ReviewCaseStatus {
@@ -503,4 +505,162 @@ model ReviewCase {
 
   @@index([distributorId, status])
   @@map("review_cases")
+}
+
+// ============================================================
+// المرحلة 3: الجرار والمخزون والشحنات
+// ============================================================
+
+enum CylinderStatus {
+  EMPTY // استُلمت فارغة من المواطن
+  FILLED // معبأة جاهزة
+  DELIVERED // سُلّمت للمواطن
+  VOID // أُلغيت عملية استلامها
+}
+
+// جرة واحدة من استحقاق. رقمها التشغيلي = رقم المواطن (مع لاحقة عند تعدد الجرار)، فريد داخل الدورة.
+model Cylinder {
+  id            String         @id @default(uuid()) @db.Uuid
+  distributorId String         @db.Uuid
+  cycleId       String         @db.Uuid
+  entitlementId String         @db.Uuid
+  entitlement   Entitlement    @relation(fields: [entitlementId], references: [id])
+  seq           Int
+  label         String
+  status        CylinderStatus
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  operations CylinderOperation[]
+
+  @@index([distributorId, status])
+  @@index([cycleId, status])
+  @@map("cylinders")
+}
+
+enum OperationType {
+  RECEIVE_EMPTY
+  FILL
+  DELIVER
+}
+
+enum OperationStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum IdentityMethod {
+  MANUAL_ENTRY // أُدخل رقم الهوية من البطاقة يدويًا
+  ID_SCAN // قُرئ من صورة البطاقة وأكده المستخدم
+}
+
+model CylinderOperation {
+  id             String           @id @default(uuid()) @db.Uuid
+  distributorId  String           @db.Uuid
+  cylinderId     String           @db.Uuid
+  cylinder       Cylinder         @relation(fields: [cylinderId], references: [id])
+  type           OperationType
+  status         OperationStatus  @default(ACTIVE)
+  // معرّف يولده الجهاز لكل عملية؛ إعادة الإرسال بالمعرّف نفسه لا تنفذ العملية مرتين.
+  idempotencyKey String
+  shipmentId     String?          @db.Uuid
+  shipment       Shipment?        @relation(fields: [shipmentId], references: [id])
+  identityMethod IdentityMethod?
+  userId         String           @db.Uuid
+  at             DateTime         @default(now())
+  cancelledAt    DateTime?
+  cancelledById  String?          @db.Uuid
+  cancelReason   String?
+
+  @@unique([distributorId, idempotencyKey])
+  @@index([cylinderId, at])
+  @@map("cylinder_operations")
+}
+
+model Station {
+  id            String     @id @default(uuid()) @db.Uuid
+  distributorId String     @db.Uuid
+  name          String
+  phone         String?
+  notes         String?
+  active        Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+
+  shipments Shipment[]
+
+  @@unique([distributorId, name])
+  @@map("stations")
+}
+
+enum ShipmentStatus {
+  ACTIVE
+  CANCELLED
+}
+
+// استلام شحنة معبأة من محطة. لا يعني دفع قيمتها (الحسابات في المرحلة 4).
+model Shipment {
+  id             String         @id @default(uuid()) @db.Uuid
+  distributorId  String         @db.Uuid
+  stationId      String         @db.Uuid
+  station        Station        @relation(fields: [stationId], references: [id])
+  receivedAt     DateTime
+  quantity       Int // إجمالي الجرار المستلمة
+  linkedCount    Int // منها جرار مواطنين (تعبئة جرار مستلمة فارغة)
+  extraCount     Int // منها كمية غير مرتبطة بمواطنين
+  reference      String?
+  notes          String?
+  status         ShipmentStatus @default(ACTIVE)
+  idempotencyKey String
+  userId         String         @db.Uuid
+  createdAt      DateTime       @default(now())
+  cancelledAt    DateTime?
+  cancelledById  String?        @db.Uuid
+  cancelReason   String?
+
+  fills CylinderOperation[]
+
+  @@unique([distributorId, idempotencyKey])
+  @@index([distributorId, receivedAt])
+  @@map("shipments")
+}
+
+enum MovementType {
+  RECEIVE_EMPTY // +فارغ
+  FILL // -فارغ +معبأ
+  DELIVER // -معبأ
+  SHIPMENT_EXTRA // +معبأ غير مرتبط بمواطنين
+  REVERSAL // عكس حركة سابقة مرة واحدة
+}
+
+// سجل حركة المخزون: للإضافة فقط، ويحفظ الرصيد بعد كل حركة.
+model InventoryMovement {
+  id            BigInt       @id @default(autoincrement())
+  distributorId String       @db.Uuid
+  type          MovementType
+  emptyDelta    Int          @default(0)
+  filledDelta   Int          @default(0)
+  extraDelta    Int          @default(0)
+  emptyAfter    Int
+  filledAfter   Int
+  extraAfter    Int
+  operationId   String?      @db.Uuid
+  shipmentId    String?      @db.Uuid
+  reversesId    BigInt?      @unique
+  note          String?
+  userId        String       @db.Uuid
+  at            DateTime     @default(now())
+
+  @@index([distributorId, at])
+  @@map("inventory_movements")
+}
+
+// الرصيد الحالي لكل موزّع. لا يقل عن صفر (قيد في القاعدة).
+model InventoryBalance {
+  distributorId String   @id @db.Uuid
+  empty         Int      @default(0)
+  filled        Int      @default(0)
+  extra         Int      @default(0)
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  @@map("inventory_balances")
 }

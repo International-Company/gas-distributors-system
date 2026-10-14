@@ -11,6 +11,8 @@ import { cleanText, digitsOnly, nameSimilarity, normalizeName } from "@/lib/arab
 const MERGE_SIMILARITY = 0.85;
 import { isValidNationalId } from "@/lib/national-id";
 import { lockCycle } from "./cycles";
+import { isolate } from "@/lib/format";
+import { cylinderCounts } from "./operations";
 
 function log(tx: Tx, actor: DistributorActor, action: string, entityType: string, entityId: string, after?: unknown, before?: unknown, reason?: string) {
   return audit(tx, actor, { action, entityType, entityId, distributorId: actor.distributorId, after, before, reason });
@@ -128,6 +130,7 @@ export async function getCitizenProfile(actor: Actor, citizenId: string) {
           cycle: { select: { id: true, name: true, number: true, status: true } },
           statement: { select: { id: true, title: true, version: true } },
           changes: { orderBy: { at: "desc" } },
+          cylinders: { orderBy: { seq: "asc" }, include: { operations: { orderBy: { at: "asc" } } } },
         },
         orderBy: { cycle: { number: "desc" } },
       }),
@@ -135,7 +138,7 @@ export async function getCitizenProfile(actor: Actor, citizenId: string) {
       c.mergedIntoId ? tx.citizen.findUnique({ where: { id: c.mergedIntoId }, select: { id: true, nationalId: true, fullName: true } }) : null,
     ]);
     const totalDue = entitlements.filter((e) => e.status === "ACTIVE").reduce((s, e) => s.add(e.amountDue), new Prisma.Decimal(0));
-    const userIds = [...new Set(entitlements.flatMap((e) => e.changes.map((x) => x.userId)))];
+    const userIds = [...new Set(entitlements.flatMap((e) => [...e.changes.map((x) => x.userId), ...e.cylinders.flatMap((c) => c.operations.map((o) => o.userId))]))];
     const users = await tx.user.findMany({ where: { id: { in: userIds } }, select: { id: true, displayName: true } });
     const names = Object.fromEntries(users.map((u) => [u.id, u.displayName]));
     // السجل الزمني: من تغييرات الاستحقاق حاليًا، وتضاف عمليات الجرار والتحصيل في المراحل التالية.
@@ -143,6 +146,15 @@ export async function getCitizenProfile(actor: Actor, citizenId: string) {
       .flatMap((e) => [
         { at: e.createdAt, kind: "ENTITLEMENT_CREATED", cycleName: e.cycle.name, details: { citizenNumber: e.citizenNumber, quantity: e.quantity }, by: null as string | null },
         ...e.changes.map((ch) => ({ at: ch.at, kind: `CHANGE_${ch.source}`, cycleName: e.cycle.name, details: { before: ch.before, after: ch.after, reason: ch.reason }, by: names[ch.userId] ?? null })),
+        ...e.cylinders.flatMap((c) =>
+          c.operations.map((o) => ({
+            at: o.at,
+            kind: `OP_${o.type}${o.status === "CANCELLED" ? "_CANCELLED" : ""}`,
+            cycleName: `${e.cycle.name} — الجرة ${isolate(c.label)}`,
+            details: { reason: o.cancelReason },
+            by: names[o.userId] ?? null,
+          })),
+        ),
       ])
       .sort((a, b) => b.at.getTime() - a.at.getTime());
     return { citizen: c, entitlements, totalDue, mergedFrom, mergedInto, timeline };
@@ -180,6 +192,14 @@ export async function editEntitlement(actor: Actor, entitlementId: string, input
     if (v.amountDue !== undefined) data.amountDue = new Prisma.Decimal(v.amountDue);
     if (v.nameInStatement !== undefined) data.nameInStatement = v.nameInStatement;
     if (!Object.keys(data).length) throw new AppError("VALIDATION", "لا توجد تغييرات");
+    // أثر التعديل على الجرار المستلمة: الرقم مكتوب عليها، والعدد لا يقل عن المستلم.
+    const received = (await cylinderCounts(tx, [e.id])).get(e.id) ?? 0;
+    if (received > 0 && v.citizenNumber !== undefined && v.citizenNumber !== e.citizenNumber) {
+      throw new AppError("INVALID_STATE", `لا يمكن تغيير رقم المواطن: استُلمت ${received} جرة مكتوب عليها الرقم ${isolate(e.citizenNumber)}`);
+    }
+    if (v.quantity !== undefined && v.quantity < received) {
+      throw new AppError("INVALID_STATE", `لا يمكن جعل العدد أقل من الجرار المستلمة فعلًا (${received})`);
+    }
     const before = { citizenNumber: e.citizenNumber, quantity: e.quantity, amountDue: e.amountDue.toFixed(2), nameInStatement: e.nameInStatement };
     const updated = await tx.entitlement.update({ where: { id: e.id }, data });
     const after = { citizenNumber: updated.citizenNumber, quantity: updated.quantity, amountDue: updated.amountDue.toFixed(2), nameInStatement: updated.nameInStatement };

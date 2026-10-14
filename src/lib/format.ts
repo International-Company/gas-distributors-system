@@ -26,8 +26,8 @@ export function plainDateTime(d: Date | string | null | undefined, fallback = ""
   return `${p.date} ${p.time}`;
 }
 
-// علامتا العزل LRI/PDI تجعلان التاريخ يُعرض من اليسار لليمين حتى داخل جملة عربية.
-const isolate = (s: string) => `⁦${s}⁩`;
+// علامتا العزل LRI/PDI تجعلان النص اللاتيني (تاريخ، رقم جرة «501-1») يُعرض من اليسار لليمين داخل جملة عربية فلا ينقلب.
+export const isolate = (s: string) => `⁦${s}⁩`;
 
 export function formatDate(d: Date | string | null | undefined, fallback = "—") {
   return toDate(d) ? isolate(plainDate(d)) : fallback;

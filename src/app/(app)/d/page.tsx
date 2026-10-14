@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { ScanLine } from "lucide-react";
 import { requirePageActor } from "@/server/http/context";
 import { getOwnDistributor } from "@/server/services/distributors";
 import { distributorOverview } from "@/server/services/overview";
@@ -17,7 +17,7 @@ export default async function DistributorHome() {
       <PageHeader
         title={`مرحبًا، ${d.name}`}
         description={d.region}
-        actions={<Link href="/d/citizens" className={buttonClass()}><Search className="size-4" /> بحث عن مواطن</Link>}
+        actions={<Link href="/d/counter" className={buttonClass()}><ScanLine className="size-4" /> الشباك</Link>}
       />
       {daysLeft !== null && daysLeft <= 7 && (
         <Alert tone="warning">
@@ -27,12 +27,15 @@ export default async function DistributorHome() {
 
       {o.cycle ? (
         <Card title={<Link href={`/d/cycles/${o.cycle.id}`} className="hover:underline">الدورة النشطة: {o.cycle.name}</Link>}>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            <Stat label="المستحقون" value={o.citizens} tone="primary" />
-            <Stat label="الجرار المستحقة" value={o.cylinders} />
-            <Stat label="سعر الجرة" value={formatMoney(o.cycle.unitPrice, o.cycle.currencyCode)} />
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Link href="/d/cylinders?status=EMPTY"><Stat label="فارغة بانتظار التعبئة" value={o.cycleCylinders.empty} tone="warning" /></Link>
+            <Link href="/d/cylinders?status=FILLED"><Stat label="معبأة جاهزة" value={o.cycleCylinders.filled} tone="primary" /></Link>
+            <Link href="/d/cylinders?status=DELIVERED"><Stat label="مسلّمة" value={o.cycleCylinders.delivered} tone="success" /></Link>
+            <Stat label="منتظرة (لم تُستلم فارغة)" value={o.cycleCylinders.waiting} />
           </div>
-          <p className="mt-3 text-xs text-muted">أعداد الجرار الفارغة والمعبأة والمسلّمة والمنتظرة تظهر هنا مع تفعيل عمليات الجرار (المرحلة 3).</p>
+          <p className="mt-3 text-sm text-muted">
+            المستحقون: {o.citizens} · الجرار المستحقة: {o.cylinders} · سعر الجرة: {formatMoney(o.cycle.unitPrice, o.cycle.currencyCode)}
+          </p>
         </Card>
       ) : (
         <Alert tone="warning">

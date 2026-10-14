@@ -11,7 +11,7 @@ if (!appPassword || appPassword.length < 12) {
 }
 
 // جداول للإضافة فقط: لا تعديل ولا حذف من التطبيق.
-const APPEND_ONLY = ["audit_logs", "login_attempts", "error_logs", "cycle_events", "entitlement_changes", "file_blobs"];
+const APPEND_ONLY = ["audit_logs", "login_attempts", "error_logs", "cycle_events", "entitlement_changes", "file_blobs", "inventory_movements"];
 // لا حذف للبيانات من التطبيق إطلاقًا (الأرشفة بدل الحذف)، باستثناء هذه الجداول.
 const DELETE_ALLOWED = ["distributor_categories", "statement_rows"];
 

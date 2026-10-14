@@ -124,3 +124,29 @@
 | `PATCH /entitlements/:id` | `{citizenNumber?, quantity?, amountDue?, nameInStatement?, reason}` | تعديل استحقاق معتمد في الدورة النشطة |
 | `GET/POST /review-cases` | `{nationalId?, fullName?, phone?, details}` | حالات المراجعة |
 | `POST /review-cases/:id/resolve` | `{resolution}` | إغلاق الحالة |
+
+---
+
+# المرحلة 3: الجرار والمخزون والشحنات (واجهات الموزّع)
+
+**منع التكرار:** كل عملية تحمل `clientOpId` يولده الجهاز (UUID). إعادة الإرسال بالمعرّف نفسه، ولو بالتزامن، ترجع نتيجة العملية الأولى مع `replayed: true` دون تنفيذ جديد. المعرّف نفسه لعملية مختلفة يرجع `CONFLICT`.
+
+**التحقق من الهوية:** `nationalId` هو رقم البطاقة كما أُدخل أو قُرئ وأكده المستخدم، و`identityMethod` هو `MANUAL_ENTRY` أو `ID_SCAN`. عند عدم المطابقة تُرفض العملية بـ `IDENTITY_MISMATCH`، وتُسجل حالة مراجعة تلقائيًا.
+
+| الطريقة والمسار | الجسم | الوصف |
+|---|---|---|
+| `GET /counter/lookup` | `?nationalId=` | الشباك: المواطن واستحقاقاته العاملة وجراره |
+| `POST /operations/receive-empty` | `{clientOpId, entitlementId, nationalId, identityMethod}` | استلام جرة فارغة: +1 فارغ |
+| `POST /operations/fill` | `{items:[{clientOpId, cylinderId}]}` | تعبئة فردية أو جماعية (كلها أو لا شيء): −1 فارغ +1 معبأ |
+| `POST /operations/deliver` | `{clientOpId, cylinderId, cylinderLabel, nationalId, identityMethod}` | تسليم: −1 معبأ |
+| `POST /operations/:id/cancel` | `{reason}` | إلغاء آخر عملية نافذة على الجرة، مع عكس أثرها مرة واحدة |
+| `GET /cylinders` | `?status=EMPTY\|FILLED\|DELIVERED\|VOID&cycleId=&q=&page=&pageSize=` | قائمة الجرار |
+| `GET /cylinders/:id` | — | الجرة وسجل عملياتها |
+| `GET/POST /stations` | `{name, phone?, notes?}` | المحطات |
+| `PATCH /stations/:id` | `{name?, phone?, notes?, active?}` | تعديل أو تعطيل محطة |
+| `GET /shipments` | `?stationId=&page=` | الشحنات |
+| `POST /shipments` | `{clientOpId, stationId, quantity, cylinderIds[], receivedAt?, reference?, notes?}` | استلام شحنة: تعبئة الجرار المختارة، والباقي كمية إضافية |
+| `GET /shipments/:id` | — | الشحنة وجرارها |
+| `POST /shipments/:id/cancel` | `{reason}` | إلغاء الشحنة (يُرفض إن سُلّمت إحدى جرارها) |
+| `GET /inventory` | — | الرصيد ومطابقته بحالات الجرار |
+| `GET /inventory/movements` | `?type=&from=&to=&page=` | سجل حركة المخزون |

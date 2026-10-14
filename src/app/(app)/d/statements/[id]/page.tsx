@@ -103,7 +103,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
               title="تغيّرت بياناتهم"
               items={data.diff.changed.map((c) => `${c.fullName} (${c.nationalId}): ${c.changes.map((x) => `${CHANGE_LABELS[x.field] ?? x.field} ${x.before ?? "—"} ← ${x.after ?? "—"}`).join("، ")}`)}
             />
-            <DiffList title="اختفوا من الكشف الجديد (يبقى سجلهم ويُعلَّم استحقاقهم «أُزيل»)" items={data.diff.removed.map((r) => `${r.fullName} — ${r.nationalId} — رقم ${r.citizenNumber}`)} />
+            <DiffList title="اختفوا من الكشف الجديد (يبقى سجلهم ويُعلَّم استحقاقهم «أُزيل»)" items={data.diff.removed.map((r) => `${r.fullName} — ${r.nationalId} — رقم ${r.citizenNumber}${r.received ? ` — استُلمت له ${r.received} جرة تبقى قابلة للتعبئة والتسليم` : ""}`)} />
           </div>
         </Card>
       )}

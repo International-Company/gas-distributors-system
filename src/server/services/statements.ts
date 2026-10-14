@@ -15,6 +15,8 @@ import {
 import { detectKind, extractExcel, extractPdf, looksLikeHeader, MAX_STATEMENT_BYTES, type Extraction } from "../statements/extract";
 import { sha256Hex, storeFile } from "./files";
 import { getActiveCycle, lockCycle } from "./cycles";
+import { cylinderCounts } from "./operations";
+import { isolate } from "@/lib/format";
 
 // ---------------------------------------------------------------------------
 // أدوات داخلية
@@ -105,8 +107,26 @@ async function revalidate(tx: Tx, st: Statement & { cycle: { unitPrice: Prisma.D
     });
   }
 
+  // أثر الإصدار الجديد على الجرار المستلمة فعلًا: رقم المواطن مكتوب على الجرة فلا يتغير،
+  // والعدد لا يقل عن المستلم.
+  const prevByNid = new Map<string, { citizenNumber: string; received: number }>();
+  if (st.supersedesId) {
+    const prev = await tx.entitlement.findMany({ where: { statementId: st.supersedesId, status: "ACTIVE" }, select: { id: true, citizenNumber: true, citizen: { select: { nationalId: true } } } });
+    const counts = await cylinderCounts(tx, prev.map((e) => e.id));
+    for (const e of prev) prevByNid.set(e.citizen.nationalId, { citizenNumber: e.citizenNumber, received: counts.get(e.id) ?? 0 });
+  }
+
   for (const w of included) {
     const r = w.row;
+    const p = r.nationalId ? prevByNid.get(r.nationalId) : undefined;
+    if (p && p.received > 0) {
+      if (r.citizenNumber && r.citizenNumber !== p.citizenNumber) {
+        w.issues.push({ field: "citizenNumber", code: "NUMBER_LOCKED", message: `لا يمكن تغيير رقم المواطن (${isolate(p.citizenNumber)}): استُلمت له ${p.received} جرة مكتوب عليها الرقم`, severity: "ERROR" });
+      }
+      if (r.quantity && r.quantity < p.received) {
+        w.issues.push({ field: "quantity", code: "QTY_BELOW_RECEIVED", message: `عدد الجرار أقل من المستلم فعلًا (${p.received})`, severity: "ERROR" });
+      }
+    }
     const c = r.nationalId ? citizenByNid.get(r.nationalId) : undefined;
     if (c && r.fullName && normalizeName(c.fullName) !== normalizeName(r.fullName)) {
       w.issues.push({ field: "fullName", code: "NAME_MISMATCH", message: `الاسم يختلف عن المسجل لهذا الرقم: ${c.fullName}`, severity: "WARNING" });
@@ -379,7 +399,8 @@ type Change = { field: string; before: string | null; after: string | null };
 export type StatementDiff = {
   added: { nationalId: string; fullName: string; citizenNumber: string; quantity: number; amount: string }[];
   changed: { nationalId: string; fullName: string; changes: Change[] }[];
-  removed: { nationalId: string; fullName: string; citizenNumber: string }[];
+  // received: جرار مستلمة لهذا الاستحقاق؛ تبقى قابلة للتعبئة والتسليم لصاحبها بعد الإزالة.
+  removed: { nationalId: string; fullName: string; citizenNumber: string; received: number }[];
   unchanged: number;
 };
 
@@ -411,8 +432,10 @@ async function computeDiff(tx: Tx, st: Statement & { cycle: { unitPrice: Prisma.
     if (changes.length) diff.changed.push({ nationalId: r.nationalId, fullName: r.fullName ?? e.nameInStatement, changes });
     else diff.unchanged++;
   }
-  for (const e of prev) {
-    if (!seen.has(e.citizen.nationalId)) diff.removed.push({ nationalId: e.citizen.nationalId, fullName: e.nameInStatement, citizenNumber: e.citizenNumber });
+  const gone = prev.filter((e) => !seen.has(e.citizen.nationalId));
+  const counts = await cylinderCounts(tx, gone.map((e) => e.id));
+  for (const e of gone) {
+    diff.removed.push({ nationalId: e.citizen.nationalId, fullName: e.nameInStatement, citizenNumber: e.citizenNumber, received: counts.get(e.id) ?? 0 });
   }
   return diff;
 }
