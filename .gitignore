@@ -11,3 +11,7 @@ npm-debug.log*
 .DS_Store
 test-results/
 playwright-report/
+
+# اختبارات محلية على ملفات حقيقية فيها بيانات شخصية — لا تُرفع أبدًا
+tests/local/
+*.local.pdf

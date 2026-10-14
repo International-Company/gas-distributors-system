@@ -100,6 +100,16 @@ describe("استيراد الكشوف ومراجعتها", () => {
     await expect(getStatement(b.actor, up.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
+  it("تنبيه الرقم المرتبط في خانة الاسم يبقى بعد إعادة التحقق", async () => {
+    const { actor } = await setup();
+    const rel = newId();
+    const up = await uploadStatement(actor, xlsxFile(await makeStatementXlsx([{ id: newId(), name: `سامي علي ( ${rel} )`, number: 1 }])), {});
+    const st = await getStatement(actor, up.id);
+    expect(st.rows[0].fullName).toBe("سامي علي");
+    expect((st.rows[0].issues as { code: string }[]).map((i) => i.code)).toEqual(["RELATED_ID"]);
+    expect(st.summary.warning).toBe(1);
+  });
+
   it("ينبه إلى الملف المكرر", async () => {
     const { actor } = await setup();
     const buf = await makeStatementXlsx(rowsOf(2));

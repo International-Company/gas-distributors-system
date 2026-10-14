@@ -9,7 +9,7 @@ import { cleanText, normalizeName, normalizePhone } from "@/lib/arabic";
 import { isValidNationalId, normalizeNationalId } from "@/lib/national-id";
 import { itemsToTable, type TextItem } from "@/lib/table-from-items";
 import {
-  applyMapping, detectMapping, FIELDS, markDuplicates, REQUIRED_FIELDS, severityOf, suggestCycleFromText,
+  applyMapping, detectMapping, extractStatementMeta, FIELDS, markDuplicates, REQUIRED_FIELDS, severityOf, suggestCycleFromText,
   type ColumnMapping, type ParsedRow, type RawTable, type RowIssue,
 } from "../statements/mapping";
 import { detectKind, extractExcel, extractPdf, looksLikeHeader, MAX_STATEMENT_BYTES, type Extraction } from "../statements/extract";
@@ -24,7 +24,7 @@ import { isolate } from "@/lib/format";
 // ---------------------------------------------------------------------------
 
 /** مشكلات تنتج عن قراءة الملف نفسه، تبقى ما لم يعدّل الموزّع الصف يدويًا. */
-const PARSE_ONLY_CODES = new Set(["AMOUNT_INVALID", "OCR_REVIEW", "NAME_UNREADABLE"]);
+const PARSE_ONLY_CODES = new Set(["AMOUNT_INVALID", "OCR_REVIEW", "NAME_UNREADABLE", "RELATED_ID"]);
 
 function log(tx: Tx, actor: DistributorActor, action: string, statementId: string, after?: unknown, before?: unknown, reason?: string) {
   return audit(tx, actor, { action: `statement.${action}`, entityType: "statement", entityId: statementId, distributorId: actor.distributorId, after, before, reason });
@@ -207,10 +207,14 @@ export async function uploadStatement(actor: Actor, file: { name: string; mime: 
     const missing = REQUIRED_FIELDS.filter((f) => mapping[f] === undefined || mapping[f] === null);
     if (ex.table.length && missing.length) notes.push("تعذر تحديد بعض الأعمدة تلقائيًا؛ حددها يدويًا في شاشة المراجعة");
 
+    const meta = extractStatementMeta(ex.text.slice(0, 2000));
+    const autoTitle = meta.date || meta.scaleNumber
+      ? `كشف${meta.date ? ` ${meta.date}` : ""}${meta.scaleNumber ? ` — ميزان ${meta.scaleNumber}` : ""}`
+      : file.name.replace(/\.[^.]+$/, "");
     const st = await tx.statement.create({
       data: {
         distributorId: actor.distributorId,
-        title: m.title || file.name.replace(/\.[^.]+$/, ""),
+        title: m.title || autoTitle,
         cycleId: supersedes?.cycleId ?? active?.id ?? null,
         supersedesId: supersedes?.id ?? null,
         version: supersedes ? supersedes.version + 1 : 1,
@@ -219,7 +223,7 @@ export async function uploadStatement(actor: Actor, file: { name: string; mime: 
         rawTable: ex.table as unknown as Prisma.InputJsonValue,
         headerRow,
         columnMapping: mapping as Prisma.InputJsonValue,
-        extraction: { needsOcr: ex.needsOcr, notes, duplicateOf: dups } as unknown as Prisma.InputJsonValue,
+        extraction: { needsOcr: ex.needsOcr, notes, duplicateOf: dups, meta } as unknown as Prisma.InputJsonValue,
         suggestedCycle: suggestCycleFromText(ex.text),
         importedById: actor.userId,
       },

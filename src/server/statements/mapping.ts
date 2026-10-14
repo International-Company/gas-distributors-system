@@ -1,4 +1,4 @@
-import { cleanText, digitsOnly, normalizeName, normalizePhone } from "@/lib/arabic";
+import { cleanText, digitsOnly, normalizeDigits, normalizeName, normalizePhone } from "@/lib/arabic";
 import { isValidNationalId, normalizeNationalId } from "@/lib/national-id";
 
 /** جدول خام: صفوف × خلايا نصية، كما استُخرج من الملف. */
@@ -32,7 +32,8 @@ const HEADER_KEYWORDS: Record<Field, string[]> = {
 
 // عناوين ضعيفة: عمود «م» غالبًا تسلسل الصف لا رقم المواطن، فلا يُختار إلا عند غياب عنوان أوضح.
 const WEAK_KEYWORDS: Partial<Record<Field, string[]>> = {
-  citizenNumber: ["م", "مسلسل", "التسلسل", "الرقم التسلسلي"],
+  // في كشوف الهيئة الفعلية (نظام توزيع الغاز) يرد رقم المواطن في عمود «المتسلسل».
+  citizenNumber: ["م", "مسلسل", "التسلسل", "المتسلسل", "متسلسل", "الرقم التسلسلي"],
 };
 
 function headerScore(cell: string, field: Field): number {
@@ -159,10 +160,17 @@ export function applyMapping(table: RawTable, headerRow: number | null, mapping:
       issues.push({ field: "nationalId", code: "ID_INVALID", message: "رقم الهوية غير صالح (فشل رقم التحقق)", severity: "ERROR" });
     }
 
+    // في كشوف الهيئة قد يرد بعد الاسم رقم هوية آخر بين قوسين (مرتبط بالمستفيد): يُفصل عن الاسم ويُنبَّه إليه.
+    const relatedIds = (normalizeDigits(rawName).match(/\d{9}/g) ?? []).filter((x) => x !== normalizeNationalId(rawId));
+    const nameText = normalizeDigits(rawName).replace(/[()]/g, " ").replace(/\d{7,}/g, " ");
     // حذف الرموز الشاردة على أطراف الاسم (حدود جداول مقروءة ضوئيًا مثلًا).
-    const fullName = rawName.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, "") || null;
+    const fullName = cleanText(nameText).replace(/^[^\p{L}]+|[^\p{L}*]+$/gu, "") || null;
     if (!fullName) issues.push({ field: "fullName", code: "NAME_MISSING", message: "الاسم مفقود", severity: "ERROR" });
     else if (!/[\u0600-\u06FFa-zA-Z]/.test(fullName)) issues.push({ field: "fullName", code: "NAME_UNREADABLE", message: "الاسم غير مقروء", severity: "ERROR" });
+
+    if (relatedIds.length) {
+      issues.push({ field: "fullName", code: "RELATED_ID", message: `يرد مع الاسم في الكشف رقم هوية آخر: ${relatedIds.join("، ")}`, severity: "WARNING" });
+    }
 
     const citizenNumber = digitsOnly(cell(row, mapping.citizenNumber)) || cleanText(cell(row, mapping.citizenNumber)) || null;
     if (!citizenNumber) issues.push({ field: "citizenNumber", code: "NUMBER_MISSING", message: "رقم المواطن في الكشف مفقود", severity: "ERROR" });
@@ -214,6 +222,18 @@ export function markDuplicates(rows: Pick<ParsedRow, "nationalId" | "citizenNumb
 export function severityOf(issues: RowIssue[]): "OK" | "WARNING" | "ERROR" {
   if (issues.some((i) => i.severity === "ERROR")) return "ERROR";
   return issues.length ? "WARNING" : "OK";
+}
+
+/**
+ * بيانات رأس كشف الهيئة: «تاريخ الكشف : 15-10-2026 ـ رقم الميزان المتسلسل : 295».
+ * تُستخدم عنوانًا مقترحًا للكشف ولا تؤثر في أي حساب.
+ */
+export function extractStatementMeta(text: string): { date: string | null; scaleNumber: string | null } {
+  const t = normalizeDigits(text);
+  const d = t.match(/(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})-(\d{1,2})-(\d{4})/);
+  const date = d ? (d[1] ? `${d[3].padStart(2, "0")}/${d[2].padStart(2, "0")}/${d[1]}` : `${d[4].padStart(2, "0")}/${d[5].padStart(2, "0")}/${d[6]}`) : null;
+  const s = normalizeName(t).match(/ميزان\s*(?:المتسلسل)?\s*(\d{1,6})/);
+  return { date, scaleNumber: s ? s[1] : null };
 }
 
 /** يقترح الدورة من نص الملف (مثل «الدورة 12» أو «دورة رقم 12»). */

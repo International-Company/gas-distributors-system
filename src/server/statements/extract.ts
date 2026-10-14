@@ -96,6 +96,9 @@ export async function extractPdf(buf: Buffer): Promise<Extraction> {
   const needsOcr = meaningful < 40 * Math.max(1, pdf.numPages);
   const notes: string[] = [];
   if (needsOcr) notes.push("الملف لا يحتوي نصًا كافيًا (ممسوح ضوئيًا على الأرجح)، ويحتاج قراءة ضوئية");
+  // ملفات PDF الصادرة من نظام الهيئة تفقد بعض الحروف عند قراءة نصها (مثل «عيسى» ← «عيس» و«علي» ← «عل»)
+  // لأن الخط المضمّن لا يعرّف كل الحروف. الأرقام لا تتأثر. لا نصحح الأسماء تخمينًا.
+  else notes.push("تنبيه: نص ملفات PDF قد يفقد بعض الحروف من الأسماء (خاصة الياء والألف المقصورة في آخر الكلمة). أرقام الهوية والهواتف لا تتأثر. للحصول على أسماء كاملة اطلب نسخة Excel من نظام الهيئة إن توفرت.");
   const table = needsOcr ? [] : itemsToTable(items, looksLikeHeader);
   return { method: "PDF_TEXT", table, text, needsOcr, notes };
 }
