@@ -21,7 +21,6 @@ export default async function LoginPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {settings.logoUrl && <img src={settings.logoUrl} alt="" className="mx-auto mb-3 size-16 object-contain" />}
             <h1 className="text-2xl font-bold text-primary">{settings.systemName}</h1>
-            <p className="mt-2 text-sm text-muted">سجّل الدخول للمتابعة</p>
           </div>
           <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
             <LoginForm hasDevicePin={Boolean(device)} />

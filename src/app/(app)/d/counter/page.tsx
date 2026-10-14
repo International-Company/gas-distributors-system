@@ -8,7 +8,7 @@ export default async function CounterPage() {
   await requirePageActor({ role: "DISTRIBUTOR" });
   return (
     <div className="space-y-6">
-      <PageHeader title="الشباك" description="استلام الجرار الفارغة وتسليم المعبأة. يبدأ كل شيء برقم الهوية من بطاقة المواطن الحاضر." />
+      <PageHeader title="الشباك" />
       <Counter />
     </div>
   );

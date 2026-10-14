@@ -25,7 +25,6 @@ export default async function DistributorPage({ params }: { params: Promise<{ id
     <div className="space-y-6">
       <PageHeader
         title={d.name}
-        description={d.region}
         actions={
           <div className="flex items-center gap-2">
             <DistributorStatusBadge d={d} />

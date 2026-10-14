@@ -17,7 +17,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
   const [data, cycles] = await Promise.all([listPayments(actor, { ...params, page: sp.page }), listCycles(actor)]);
   return (
     <div className="space-y-6">
-      <PageHeader title="التحصيلات" description="تحصيلات المواطنين. لتسجيل تحصيل جديد استخدم الشباك أو ملف المواطن." />
+      <PageHeader title="التحصيلات" />
       <form method="get" className="flex flex-wrap gap-2 rounded-xl border border-border bg-surface p-3">
         <Select name="cycleId" defaultValue={sp.cycleId ?? ""} className="w-48" aria-label="الدورة">
           <option value="">كل الدورات</option>

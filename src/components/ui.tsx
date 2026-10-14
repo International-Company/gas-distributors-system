@@ -102,13 +102,11 @@ export function Alert({ tone = "primary", children, className }: { tone?: Tone; 
   return <div className={cn("rounded-lg px-4 py-3 text-sm", tones[tone], className)} role={tone === "danger" ? "alert" : "status"}>{children}</div>;
 }
 
-export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
+/** عنوان الصفحة فقط، دون نص شرح تحته (قرار المالك). */
+export function PageHeader({ title, actions }: { title: string; actions?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-bold md:text-2xl">{title}</h1>
-        {description && <p className="mt-1 text-sm text-muted">{description}</p>}
-      </div>
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <h1 className="text-xl font-bold md:text-2xl">{title}</h1>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
   );

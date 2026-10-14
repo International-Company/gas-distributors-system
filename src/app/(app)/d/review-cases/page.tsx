@@ -20,7 +20,6 @@ export default async function ReviewCasesPage({ searchParams }: { searchParams: 
     <div className="space-y-6">
       <PageHeader
         title="حالات المراجعة"
-        description="مواطنون لا يظهرون في كشف معتمد، وتعذر التحقق من الهوية، وعمليات نُفذت دون اتصال ورفضها الخادم. تسجيل الحالة لا ينشئ مواطنًا ولا استحقاقًا ولا يغيّر أي رصيد."
       />
       <NewCase initialOpen={sp.new === "1"} initial={{ nationalId: sp.nationalId ?? "", fullName: sp.fullName ?? "" }} />
       {cases.length === 0 ? (

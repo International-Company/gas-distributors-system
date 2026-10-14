@@ -10,7 +10,6 @@ export default async function SyncPage() {
     <div className="space-y-6">
       <PageHeader
         title="المزامنة والعمل دون اتصال"
-        description="عمليات الشباك المحفوظة على هذا الجهاز وحالتها. لا تُعد العملية منجزة قبل أن يؤكدها الخادم."
       />
       <SyncCenter />
     </div>

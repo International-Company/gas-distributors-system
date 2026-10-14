@@ -15,7 +15,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
   const [list, approved] = await Promise.all([listStatements(actor, { status }), listStatements(actor, { status: "APPROVED" })]);
   return (
     <div className="space-y-6">
-      <PageHeader title="كشوف هيئة الغاز" description="كل كشف يبدأ «قيد المراجعة» ولا يُستخدم في أي عملية قبل اعتماده صراحةً." />
+      <PageHeader title="كشوف هيئة الغاز" />
       <Card title="استيراد كشف">
         <UploadForm approved={approved.map((s) => ({ id: s.id, title: s.title, version: s.version, cycleName: s.cycle?.name ?? "" }))} />
       </Card>

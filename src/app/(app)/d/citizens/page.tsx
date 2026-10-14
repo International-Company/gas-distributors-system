@@ -11,7 +11,7 @@ export default async function CitizensPage() {
   const archivable = await countArchivable(actor);
   return (
     <div className="space-y-6">
-      <PageHeader title="المواطنون" description="ابحث بالاسم أو رقم الهوية أو الهاتف أو رقم المواطن في الكشف، أو صوّر بطاقة الهوية." />
+      <PageHeader title="المواطنون" />
       <CitizenSearch />
       {archivable > 0 && <ArchiveEnded count={archivable} />}
     </div>

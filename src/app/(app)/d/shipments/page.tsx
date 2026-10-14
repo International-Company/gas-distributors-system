@@ -19,7 +19,7 @@ export default async function ShipmentsPage({ searchParams }: { searchParams: Pr
   ]);
   return (
     <div className="space-y-6">
-      <PageHeader title="شحنات المحطات" description="استلام شحنة معبأة يعبئ جرار المواطنين المختارة، والباقي يُسجل كمية إضافية. الاستلام لا يعني دفع قيمة الشحنة." />
+      <PageHeader title="شحنات المحطات" />
       <NewShipment
         stations={stations.filter((s) => s.active).map((s) => ({ id: s.id, name: s.name, defaultUnitPrice: s.defaultUnitPrice?.toString() ?? "" }))}
         empties={empties.rows.map((c) => ({ id: c.id, label: c.label, name: c.entitlement.nameInStatement, cycleName: c.entitlement.cycle.name }))}

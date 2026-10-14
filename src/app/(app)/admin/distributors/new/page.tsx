@@ -10,7 +10,7 @@ export default async function NewDistributorPage() {
   const categories = await listCategories(actor);
   return (
     <div className="max-w-2xl">
-      <PageHeader title="حساب موزّع جديد" description="سيُطلب من الموزّع تغيير كلمة المرور عند أول دخول." />
+      <PageHeader title="حساب موزّع جديد" />
       <DistributorForm categories={categories.map((c) => ({ id: c.id, name: c.name }))} />
     </div>
   );

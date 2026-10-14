@@ -25,7 +25,7 @@ export default async function LoginAttemptsPage({ searchParams }: { searchParams
   const data = await listLoginAttempts(actor, { ...params, page: sp.page });
   return (
     <div>
-      <PageHeader title="محاولات الدخول" description="كل محاولات الدخول الناجحة والفاشلة مع الوقت وعنوان IP." />
+      <PageHeader title="محاولات الدخول" />
       <form method="get" className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-border bg-surface p-3 md:grid-cols-5">
         <Input name="username" defaultValue={sp.username} placeholder="اسم المستخدم" dir="ltr" />
         <Select name="success" defaultValue={sp.success ?? ""} aria-label="النتيجة">

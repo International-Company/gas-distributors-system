@@ -20,7 +20,6 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
     <div className="space-y-6">
       <PageHeader
         title="التقارير المركزية"
-        description="ملخص عام لكل موزّع (الدورة النشطة، المخزون، المحصل، المستحقات) دون ترتيب أو مقارنة أداء."
         actions={
           <>
             <a href={`/api/v1/admin/central/xlsx${qs ? `?${qs}` : ""}`} className={buttonClass("secondary")}><Download className="size-4" /> Excel</a>

@@ -20,7 +20,7 @@ export default async function CylindersPage({ searchParams }: { searchParams: Pr
   );
   return (
     <div className="space-y-4">
-      <PageHeader title="الجرار" description="الجرار المستلمة وحالاتها. حدد الجرار الفارغة لتعبئتها دفعة واحدة." />
+      <PageHeader title="الجرار" />
       <div className="flex flex-wrap gap-2">
         {tab("", "الكل")}
         {tab("EMPTY", "فارغة لم تُعبأ")}

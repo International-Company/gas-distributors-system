@@ -9,7 +9,7 @@ export default async function ReportsPage() {
   await requirePageActor({ role: "DISTRIBUTOR" });
   return (
     <div className="space-y-6">
-      <PageHeader title="التقارير" description="كل تقرير قابل للتصفية والتصدير إلى Excel والطباعة أو الحفظ PDF." />
+      <PageHeader title="التقارير" />
       <ul className="grid gap-3 md:grid-cols-2">
         {listReports().map((r) => (
           <li key={r.key}>

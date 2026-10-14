@@ -12,7 +12,7 @@ export default async function StationsPage() {
   const shipments = new Map(counts.map((s) => [s.id, s._count.shipments]));
   return (
     <div className="max-w-4xl space-y-6">
-      <PageHeader title="محطات التعبئة" description="حساب كل محطة: قيمة الشحنات المستلمة (العدد × سعر الشراء) مقابل الدفعات." />
+      <PageHeader title="محطات التعبئة" />
       <StationsManager
         rows={rows.map((s) => ({
           id: s.id, name: s.name, phone: s.phone, notes: s.notes, active: s.active, shipments: shipments.get(s.id) ?? 0,

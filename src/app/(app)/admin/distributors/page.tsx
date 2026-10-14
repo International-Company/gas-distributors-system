@@ -23,7 +23,6 @@ export default async function DistributorsPage({ searchParams }: { searchParams:
     <div>
       <PageHeader
         title="الموزّعون"
-        description={`${rows.length} حساب`}
         actions={
           <>
             {hasPermission(actor, "distributors.export") && (

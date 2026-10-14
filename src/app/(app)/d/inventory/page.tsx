@@ -18,7 +18,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const [inv, moves] = await Promise.all([getInventory(actor), listMovements(actor, { ...params, page: sp.page })]);
   return (
     <div className="space-y-6">
-      <PageHeader title="المخزون" description="الرصيد محسوب من سجل الحركات؛ كل حركة تحفظ الرصيد بعدها ولا تُعدّل." />
+      <PageHeader title="المخزون" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Link href="/d/cylinders?status=EMPTY"><Stat label="فارغة (جرار مواطنين)" value={inv.balance.empty} tone="warning" /></Link>
         <Link href="/d/cylinders?status=FILLED"><Stat label="معبأة جاهزة (جرار مواطنين)" value={inv.balance.filled} tone="primary" /></Link>

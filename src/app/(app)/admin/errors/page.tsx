@@ -12,7 +12,7 @@ export default async function ErrorsPage({ searchParams }: { searchParams: Promi
   const data = await listErrorLogs(actor, { page: sp.page });
   return (
     <div>
-      <PageHeader title="سجل الأخطاء التقنية" description="الأخطاء غير المتوقعة التي حدثت في الخادم." />
+      <PageHeader title="سجل الأخطاء التقنية" />
       <Card>
         {data.rows.length === 0 ? (
           <EmptyState>لا توجد أخطاء مسجلة.</EmptyState>

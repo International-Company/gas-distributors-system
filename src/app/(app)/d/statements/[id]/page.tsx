@@ -41,8 +41,12 @@ export default async function StatementPage({ params, searchParams }: { params: 
     <div className="space-y-6">
       <PageHeader
         title={st.title}
-        description={st.supersedes ? `إصدار ${st.version} — يحل محل «${st.supersedes.title}» (الإصدار ${st.supersedes.version})` : undefined}
-        actions={<StatementStatusBadge status={st.status} />}
+        actions={
+          <span className="flex gap-1">
+            {st.version > 1 && <Badge tone="primary">الإصدار {st.version}</Badge>}
+            <StatementStatusBadge status={st.status} />
+          </span>
+        }
       />
 
       <Card title="الملف">
@@ -50,6 +54,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
           items={[
             ["الملف الأصلي", <a key="f" className="text-primary hover:underline" href={`/api/v1/statements/${id}/file`} target="_blank" rel="noreferrer">{st.file.originalName}</a>],
             ["طريقة الاستخراج", st.parseMethod === "EXCEL" ? "Excel" : st.parseMethod === "PDF_TEXT" ? "PDF نصي" : st.parseMethod === "PDF_OCR" ? "قراءة ضوئية" : "لم يُستخرج بعد"],
+            ...(st.supersedes ? ([["يحل محل", `«${st.supersedes.title}» (الإصدار ${st.supersedes.version})`]] as [string, string][]) : []),
             ["الدورة", st.cycle?.name ?? "لم تُحدد"],
             ["الدورة المقترحة من الملف", st.suggestedCycle ? `الدورة ${st.suggestedCycle}` : "—"],
             ["تاريخ الاستيراد", formatDateTime(st.importedAt)],

@@ -14,7 +14,7 @@ export default async function CyclesPage() {
   const active = cycles.find((c) => c.status === "OPEN");
   return (
     <div className="space-y-6">
-      <PageHeader title="الدورات" description="دورة نشطة واحدة فقط في كل وقت. الإغلاق لا يصفّر الأرصدة ولا يعني سدادها." />
+      <PageHeader title="الدورات" />
       {!active && (
         <Card title="بدء دورة جديدة">
           <NewCycleForm currencySymbol={settings.currencySymbol} />

@@ -14,7 +14,7 @@ export default async function AdminDashboard() {
   const central = hasPermission(actor, "reports.view") ? await centralOverview(actor, {}) : null;
   return (
     <div className="space-y-6">
-      <PageHeader title="لوحة التحكم" description={`مرحبًا ${actor.displayName}`} />
+      <PageHeader title="لوحة التحكم" />
 
       {accounts && (
         <>

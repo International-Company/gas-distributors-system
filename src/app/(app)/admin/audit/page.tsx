@@ -14,7 +14,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   const data = await listAuditLogs(actor, { ...params, page: sp.page });
   return (
     <div>
-      <PageHeader title="سجل التدقيق" description="سجل محمي للإضافة فقط؛ لا يمكن تعديله أو حذفه." />
+      <PageHeader title="سجل التدقيق" />
       <form method="get" className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-border bg-surface p-3 md:grid-cols-5">
         <Select name="action" defaultValue={sp.action ?? ""} className="col-span-2 md:col-span-2" aria-label="نوع العملية">
           <option value="">كل العمليات</option>

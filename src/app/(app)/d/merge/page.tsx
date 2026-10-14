@@ -13,7 +13,6 @@ export default async function MergePage() {
     <div className="space-y-6">
       <PageHeader
         title="اقتراحات الدمج"
-        description="سجلات بأسماء متشابهة جدًا وأرقام هوية مختلفة. الدمج قرار بشري فقط، ويُرفض إن كان للسجلين استحقاق في الدورة نفسها."
       />
       {pairs.length === 0 ? (
         <EmptyState>لا توجد اقتراحات.</EmptyState>

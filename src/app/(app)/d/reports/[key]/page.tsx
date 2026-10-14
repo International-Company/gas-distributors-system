@@ -17,7 +17,7 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
   const [result, cycles] = await Promise.all([runReport(actor, key, filters), reportCycles(actor)]);
   return (
     <div className="space-y-4">
-      <PageHeader title={def.title} description={def.description} />
+      <PageHeader title={def.title} />
       <ReportView result={result} filters={def.filters} cycles={cycles} sp={sp} base={`/d/reports/${key}`} xlsxPath={`/api/v1/reports/${key}/xlsx`} printPath={`/print/reports/${key}`} />
     </div>
   );

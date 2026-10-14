@@ -13,7 +13,7 @@ export default async function AdminsPage() {
   const rows = await listAdmins(actor);
   return (
     <div className="space-y-6">
-      <PageHeader title="مديرو النظام" description="إنشاء حسابات المديرين وتحديد صلاحياتهم. متاح للمدير الرئيسي فقط." actions={<AdminEditor permissions={ADMIN_PERMISSIONS} />} />
+      <PageHeader title="مديرو النظام" actions={<AdminEditor permissions={ADMIN_PERMISSIONS} />} />
       <Card>
         <ul className="divide-y divide-border">
           {rows.map((a) => (

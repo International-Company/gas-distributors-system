@@ -21,7 +21,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   const [box, cycles] = await Promise.all([cashBox(actor, filters), listCycles(actor)]);
   return (
     <div className="space-y-6">
-      <PageHeader title="الصندوق" description="المقبوضات من المواطنين، والمصروفات، ودفعات المحطات، والرصيد المحسوب." />
+      <PageHeader title="الصندوق" />
       <form method="get" className="flex flex-wrap gap-2 rounded-xl border border-border bg-surface p-3">
         <Select name="cycleId" defaultValue={sp.cycleId ?? ""} className="w-48" aria-label="الدورة">
           <option value="">كل الدورات</option>

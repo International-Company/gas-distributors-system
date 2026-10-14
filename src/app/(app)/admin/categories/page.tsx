@@ -11,7 +11,7 @@ export default async function CategoriesPage() {
   const rows = await listCategories(actor);
   return (
     <div className="max-w-2xl">
-      <PageHeader title="تصنيفات الموزّعين" description="تصنيفات مخصصة لتنظيم الحسابات وتصفيتها." />
+      <PageHeader title="تصنيفات الموزّعين" />
       <CategoriesManager
         rows={rows.map((c) => ({ id: c.id, name: c.name, count: c._count.distributors }))}
         canManage={hasPermission(actor, "categories.manage")}

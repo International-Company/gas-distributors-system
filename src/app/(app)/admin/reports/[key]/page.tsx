@@ -19,7 +19,7 @@ export default async function AdminReportPage({ params, searchParams }: { params
   const [result, cycles] = await Promise.all([runReport(actor, key, filters, { distributorId: sp.distributorId }), reportCycles(actor, sp.distributorId)]);
   return (
     <div className="space-y-4">
-      <PageHeader title={def.title} description={`الموزّع: ${result.distributorName}`} />
+      <PageHeader title={`${def.title} — ${result.distributorName}`} />
       <div className="flex flex-wrap gap-1">
         {listReports().map((r) => (
           <Link key={r.key} href={`/admin/reports/${r.key}?distributorId=${sp.distributorId}`} className={cn(buttonClass(r.key === key ? "primary" : "ghost", "sm"))}>{r.title}</Link>
