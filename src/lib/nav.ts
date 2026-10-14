@@ -2,22 +2,9 @@ import type { Actor } from "@/server/actor";
 import { hasPermission } from "@/server/actor";
 import type { AdminPermission } from "@/server/permissions";
 
-export type NavIcon = "home" | "users" | "tags" | "shield" | "history" | "login" | "bug" | "settings" | "user" | "calendar" | "file" | "search" | "merge" | "alert" | "counter" | "cylinder" | "truck" | "warehouse" | "factory" | "wallet" | "banknote" | "receipt" | "chart" | "sync";
-/** مجموعات القائمة الجانبية بترتيب ظهورها. «main» بلا عنوان، و«account» تظهر في بطاقة المستخدم أسفل القائمة. */
-export type NavGroup = "main" | "work" | "records" | "stock" | "money" | "insight" | "people" | "oversight" | "system" | "account";
-export const NAV_GROUPS: { key: NavGroup; label: string | null }[] = [
-  { key: "main", label: null },
-  { key: "work", label: "العمل اليومي" },
-  { key: "records", label: "الكشوف والمواطنون" },
-  { key: "stock", label: "الجرار والمخزون" },
-  { key: "money", label: "المالية" },
-  { key: "people", label: "الموزّعون" },
-  { key: "oversight", label: "الرقابة والتقارير" },
-  { key: "insight", label: "التقارير" },
-  { key: "system", label: "النظام" },
-  { key: "account", label: null },
-];
-export type NavItem = { href: string; label: string; icon: NavIcon; group: NavGroup };
+import type { NavGroup, NavItem } from "./nav-groups";
+import { NAV_GROUPS } from "./nav-groups";
+export { NAV_GROUPS, type NavGroup, type NavIcon, type NavItem } from "./nav-groups";
 
 type Def = NavItem & { permission?: AdminPermission; superAdmin?: boolean };
 
@@ -62,17 +49,24 @@ export const NAV_LOCKED = new Set(["/admin", "/admin/settings", "/d", "/d/sync",
 
 /** كل الأقسام المعرفة مع القائمة التي تنتمي لها (لشاشة الإعدادات). */
 export const ALL_NAV = [
-  ...ADMIN_NAV.map((d) => ({ href: d.href, label: d.label, menu: "admin" as const })),
-  ...DISTRIBUTOR_NAV.filter((d) => d.href !== "/account").map((d) => ({ href: d.href, label: d.label, menu: "distributor" as const })),
+  ...ADMIN_NAV.map((d) => ({ href: d.href, label: d.label, group: d.group, menu: "admin" as const })),
+  ...DISTRIBUTOR_NAV.filter((d) => d.href !== "/account").map((d) => ({ href: d.href, label: d.label, group: d.group, menu: "distributor" as const })),
 ];
+
+const groupIdx = (g: NavGroup) => NAV_GROUPS.findIndex((x) => x.key === g);
 
 /** عناصر القائمة المسموحة للمستخدم. الإخفاء هنا للتنظيم فقط؛ الحماية الفعلية على الخادم. */
 export function navFor(actor: Actor, overrides: NavOverrides = {}): NavItem[] {
   const defs = actor.role === "ADMIN" ? ADMIN_NAV : DISTRIBUTOR_NAV;
   return defs
-    .map((d, i) => ({ d, i, o: overrides[d.href] ?? {} }))
+    // i: موضع القسم الافتراضي داخل مجموعته (الترتيب المخصص يعني الموضع داخل المجموعة).
+    .map((d) => ({ d, i: defs.filter((x) => x.group === d.group).indexOf(d), o: overrides[d.href] ?? {} }))
     .filter(({ d, o }) => (d.superAdmin ? actor.isSuperAdmin : d.permission ? hasPermission(actor, d.permission) : true) && (!o.hidden || NAV_LOCKED.has(d.href)))
-    // الترتيب داخل كل مجموعة؛ المحدد صراحة يتقدم عند التساوي مع الموضع الافتراضي لقسم آخر.
-    .sort((a, b) => (a.o.order ?? a.i) - (b.o.order ?? b.i) || Number(b.o.order !== undefined) - Number(a.o.order !== undefined) || a.i - b.i)
+    // المجموعات بترتيبها الثابت، ثم الترتيب داخل المجموعة؛ المحدد صراحة يتقدم عند التساوي مع الموضع الافتراضي لقسم آخر.
+    .sort((a, b) =>
+      groupIdx(a.d.group) - groupIdx(b.d.group) ||
+      (a.o.order ?? a.i) - (b.o.order ?? b.i) ||
+      Number(b.o.order !== undefined) - Number(a.o.order !== undefined) ||
+      a.i - b.i)
     .map(({ d, o }) => ({ href: d.href, label: o.label?.trim() || d.label, icon: d.icon, group: d.group }));
 }

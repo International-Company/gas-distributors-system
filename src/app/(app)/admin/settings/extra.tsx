@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Input } from "@/components/ui";
 import { useApi, useFormSubmit } from "@/components/api-client";
+import { NAV_GROUPS, type NavGroup } from "@/lib/nav-groups";
 
 /** رفع الشعار أو إزالته (PNG أو JPEG أو WebP حتى 512 كيلوبايت). */
 export function LogoForm({ logoUrl }: { logoUrl: string | null }) {
@@ -45,7 +46,7 @@ export function LogoForm({ logoUrl }: { logoUrl: string | null }) {
   );
 }
 
-type NavRow = { href: string; label: string; menu: "admin" | "distributor"; locked: boolean };
+type NavRow = { href: string; label: string; group: NavGroup; menu: "admin" | "distributor"; locked: boolean };
 type Override = { label?: string; order?: number; hidden?: boolean };
 
 /** تعديل أسماء أقسام القائمة الجانبية وترتيبها وإخفاء غير الأساسي منها. */
@@ -80,21 +81,26 @@ export function NavEditor({ rows, overrides }: { rows: NavRow[]; overrides: Reco
           <tr><th className="py-1 font-medium">القسم الأصلي</th><th className="py-1 font-medium">الاسم المعروض</th><th className="py-1 font-medium">الترتيب</th><th className="py-1 font-medium">إخفاء</th></tr>
         </thead>
         <tbody>
-          {rows.filter((r) => r.menu === menu).map((r) => (
+          {NAV_GROUPS.map((g) => ({ g, items: rows.filter((r) => r.menu === menu && r.group === g.key) })).filter((x) => x.items.length).flatMap(({ g, items }) => [
+            <tr key={`g-${g.key}`}>
+              <td colSpan={4} className="pb-1 pt-3 text-xs font-semibold text-primary">{g.label ?? (g.key === "account" ? "الحساب" : "عام")}</td>
+            </tr>,
+            ...items.map((r) => (
             <tr key={r.href} className="border-t border-border">
               <td className="py-1.5">{r.label}</td>
               <td className="py-1.5"><Input className="h-8" placeholder={r.label} value={v[r.href]?.label ?? ""} onChange={(e) => set(r.href, { label: e.target.value })} aria-label={`اسم ${r.label}`} /></td>
               <td className="py-1.5"><Input className="h-8 w-20" type="number" min={0} value={v[r.href]?.order ?? ""} onChange={(e) => set(r.href, { order: e.target.value === "" ? undefined : Number(e.target.value) })} aria-label={`ترتيب ${r.label}`} /></td>
               <td className="py-1.5">{r.locked ? <span className="text-xs text-muted">أساسي</span> : <input type="checkbox" className="size-4" checked={!!v[r.href]?.hidden} onChange={(e) => set(r.href, { hidden: e.target.checked })} aria-label={`إخفاء ${r.label}`} />}</td>
             </tr>
-          ))}
+            )),
+          ])}
         </tbody>
       </table>
     </div>
   );
   return (
     <Card title="القائمة الجانبية">
-      <p className="mb-3 text-xs text-muted">الإخفاء للتنظيم فقط؛ الوصول الفعلي تحكمه الصلاحيات على الخادم. الأقسام مجمّعة في القائمة حسب طبيعتها، والترتيب رقم يطبق داخل مجموعة القسم (الأصغر أولًا)؛ يُترك فارغًا للترتيب الافتراضي.</p>
+      <p className="mb-3 text-xs text-muted">الإخفاء للتنظيم فقط؛ الوصول الفعلي تحكمه الصلاحيات على الخادم. الأقسام مجمّعة كما تظهر في القائمة. الترتيب رقم يحدد موضع القسم داخل مجموعته (0 = الأول)؛ يُترك فارغًا للترتيب الافتراضي.</p>
       {run.error && <Alert tone="danger" className="mb-3">{run.error}</Alert>}
       {saved && <Alert tone="success" className="mb-3">حُفظت القائمة.</Alert>}
       <div className="grid gap-6 lg:grid-cols-2">
