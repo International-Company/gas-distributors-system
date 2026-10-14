@@ -7,14 +7,24 @@ import { Prisma, PrismaClient } from "@prisma/client";
 
 const globalForDb = globalThis as unknown as { appDb?: PrismaClient };
 
-function createClient() {
-  const url = process.env.APP_DATABASE_URL;
-  if (!url) throw new Error("APP_DATABASE_URL غير محدد");
-  return new PrismaClient({ datasourceUrl: url });
+// يُنشأ الاتصال عند أول استخدام فقط، لا عند تحميل الوحدة، حتى لا يتطلب البناء
+// (next build) وجود متغيرات قاعدة البيانات.
+function getClient(): PrismaClient {
+  if (!globalForDb.appDb) {
+    const url = process.env.APP_DATABASE_URL;
+    if (!url) throw new Error("APP_DATABASE_URL غير محدد");
+    globalForDb.appDb = new PrismaClient({ datasourceUrl: url });
+  }
+  return globalForDb.appDb;
 }
 
-export const appDb: PrismaClient = globalForDb.appDb ?? createClient();
-if (process.env.NODE_ENV !== "production") globalForDb.appDb = appDb;
+export const appDb: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = getClient();
+    const value = Reflect.get(client, prop, client);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});
 
 export type Tx = Prisma.TransactionClient;
 
