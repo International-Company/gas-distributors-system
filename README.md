@@ -84,9 +84,12 @@ npm run typecheck
    - `APP_DATABASE_URL` = نفس رابط Postgres مع استبدال المستخدم وكلمة المرور بـ `gas_app` و `APP_DB_PASSWORD`
      (مثال: `postgresql://gas_app:<APP_DB_PASSWORD>@${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}`)
 4. عند كل تشغيل ينفذ `npm start` السكربت `scripts/predeploy.mjs`: يطبّق الترحيلات المعتمدة ويجهّز دور `gas_app`، ثم يشغّل الخادم. يتوقف التشغيل إن فشل أي منهما.
-5. أنشئ المدير الأول: `railway run npm run admin:create -- --username admin --name "المدير الرئيسي"`.
+5. أنشئ المدير الأول **داخل الحاوية** (عنوان قاعدة البيانات الداخلي غير متاح من جهازك، لذلك لا يعمل `railway run`):
+   ```bash
+   railway ssh -- sh -c 'npx tsx scripts/create-admin.ts --username admin --name "المدير الرئيسي"'
+   ```
 
-> لم يُنشر النظام على Railway بعد؛ التحقق من النشر مجدول في المرحلة 8.
+> النشر الحالي: https://gas-distributors-system-production.up.railway.app (مشروع Railway: fortunate-empathy). التحقق الكامل من النشر، ومنه النسخ الاحتياطي، مجدول في المرحلة 8.
 
 ## النسخ الاحتياطي
 
