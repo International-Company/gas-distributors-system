@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { requirePageActor } from "@/server/http/context";
 import { adminOverview } from "@/server/services/overview";
+import { centralOverview } from "@/server/reports/service";
+import { hasPermission } from "@/server/actor";
 import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 
 export const metadata = { title: "لوحة التحكم" };
 
 export default async function AdminDashboard() {
   const actor = await requirePageActor({ role: "ADMIN" });
   const { accounts, security } = await adminOverview(actor);
+  const central = hasPermission(actor, "reports.view") ? await centralOverview(actor, {}) : null;
   return (
     <div className="space-y-6">
       <PageHeader title="لوحة التحكم" description={`مرحبًا ${actor.displayName}`} />
@@ -44,6 +47,17 @@ export default async function AdminDashboard() {
         </>
       )}
 
+      {central && (
+        <Card title={<Link href="/admin/reports" className="hover:underline">ملخص التشغيل المركزي (الدورات النشطة)</Link>}>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Stat label="المستحقون" value={central.totals.citizens} tone="primary" />
+            <Stat label="جرار سُلّمت" value={central.totals.delivered} tone="success" />
+            <Stat label="المحصل (كل الدورات)" value={formatMoney(central.totals.collected)} />
+            <Stat label="المستحقات المتبقية" value={formatMoney(central.totals.outstanding)} tone="warning" />
+          </div>
+        </Card>
+      )}
+
       {security && (
         <div className="grid grid-cols-2 gap-3">
           <Stat label="محاولات دخول فاشلة (24 ساعة)" value={security.failed24h} tone={security.failed24h > 20 ? "warning" : "neutral"} />
@@ -54,7 +68,7 @@ export default async function AdminDashboard() {
       {!accounts && !security && <EmptyState>لا توجد أقسام متاحة لصلاحياتك في لوحة التحكم.</EmptyState>}
 
       <p className="text-xs text-muted">
-        ملخصات المواطنين والجرار والمخزون والمبالغ لكل موزّع تُضاف إلى هذه اللوحة عند تنفيذ المراحل التشغيلية والمالية.
+        التفاصيل لكل موزّع في «التقارير» حسب صلاحياتك.
       </p>
     </div>
   );

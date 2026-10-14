@@ -119,6 +119,7 @@ await page.screenshot({ path: `${OUT}/p3-02-cylinders.png`, fullPage: true });
 // محطة وشحنة: جرة 502 من الشحنة + 2 إضافية
 await page.goto(BASE + "/d/stations");
 await page.fill("#st-name", `محطة ${tag}`);
+await page.fill("#st-price", "15");
 await page.getByRole("button", { name: "إضافة" }).click();
 await page.waitForSelector(`text=محطة ${tag}`);
 await page.goto(BASE + "/d/shipments");

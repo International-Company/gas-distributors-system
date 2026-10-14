@@ -8,7 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const settings = await getPublicSettings();
   const roleLabel = actor.role === "ADMIN" ? (actor.isSuperAdmin ? "مدير رئيسي" : "مدير نظام") : "موزّع";
   return (
-    <AppShell systemName={settings.systemName} nav={navFor(actor)} userName={actor.displayName} roleLabel={roleLabel}>
+    <AppShell systemName={settings.systemName} logoUrl={settings.logoUrl} nav={navFor(actor, settings.navOverrides)} userName={actor.displayName} roleLabel={roleLabel}>
       {children}
     </AppShell>
   );

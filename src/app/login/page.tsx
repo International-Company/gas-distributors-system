@@ -18,6 +18,8 @@ export default async function LoginPage() {
       <div className="flex flex-1 items-center justify-center px-4 pb-16">
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {settings.logoUrl && <img src={settings.logoUrl} alt="" className="mx-auto mb-3 size-16 object-contain" />}
             <h1 className="text-2xl font-bold text-primary">{settings.systemName}</h1>
             <p className="mt-2 text-sm text-muted">سجّل الدخول للمتابعة</p>
           </div>

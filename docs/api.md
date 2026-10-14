@@ -175,3 +175,23 @@
 - `POST /shipments` يقبل `unitPrice` (سعر شراء الجرة لهذه الشحنة). إن غاب يُستخدم `defaultUnitPrice` للمحطة، وإن لم يوجد تُرفض الشحنة.
 - `POST/PATCH /stations` يقبلان `defaultUnitPrice`.
 - `GET /counter/lookup` يعيد لكل استحقاق `paid` و `amountRemaining` و `canPay`، ويعيد للمواطن `totalRemaining`.
+
+---
+
+# المرحلة 5: التقارير والتصدير والإعدادات
+
+| الطريقة والمسار | الصلاحية | الوصف |
+|---|---|---|
+| `GET /reports` | أي مستخدم | قائمة التقارير وفلاترها |
+| `GET /reports/:key` | الموزّع لبياناته؛ المدير بـ `reports.view` مع `distributorId` | تشغيل تقرير (JSON) |
+| `GET /reports/:key/xlsx` | كالسابق | تصدير Excel (يُسجل في التدقيق) |
+| `GET /admin/central` | `reports.view` | الملخص المركزي لكل موزّع (`?categoryId=&includeArchived=1`) |
+| `GET /admin/central/xlsx` | `reports.view` | تصدير الملخص المركزي |
+| `PUT /admin/settings/nav` | `settings.manage` | `{ "/d/counter": { label, order, hidden } }` |
+| `POST/DELETE /admin/settings/logo` | `settings.manage` | رفع الشعار (multipart `file`: PNG/JPEG/WebP ≤ 512KB) أو إزالته |
+| `GET /settings/logo` | عام | الشعار |
+| `PATCH /admin/settings` | `settings.manage` | يقبل أيضًا `allowedFileTypes[]` و `maxUploadMb` (1–50) |
+
+مفاتيح التقارير: `citizens-sheet` (`cycleId, state`)، `not-delivered` (`cycleId`)، `unpaid` (`cycleId?`)، `empty-not-filled` و `filled-not-delivered` (`cycleId?`)، `operations-period` (`from, to, type`)، `cycles-comparison`، `collections` (`cycleId?, from, to`)، `expenses` و `cash-box` و `inventory` (`from, to`)، `stations`، `statements` (`cycleId?`). التواريخ `YYYY-MM-DD` بتوقيت غزة.
+
+الطباعة وحفظ PDF: صفحات `/print/reports/:key` و `/print/central` بالفلاتر نفسها، تفتح نافذة الطباعة في المتصفح.

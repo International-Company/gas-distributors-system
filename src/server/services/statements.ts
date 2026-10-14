@@ -12,9 +12,10 @@ import {
   applyMapping, detectMapping, extractStatementMeta, FIELDS, markDuplicates, REQUIRED_FIELDS, severityOf, suggestCycleFromText,
   type ColumnMapping, type ParsedRow, type RawTable, type RowIssue,
 } from "../statements/mapping";
-import { detectKind, extractExcel, extractPdf, looksLikeHeader, MAX_STATEMENT_BYTES, type Extraction } from "../statements/extract";
+import { detectKind, extractExcel, extractPdf, looksLikeHeader, type Extraction } from "../statements/extract";
 import { sha256Hex, storeFile } from "./files";
 import { getActiveCycle, lockCycle } from "./cycles";
+import { assertUploadAllowed } from "./settings";
 import { cylinderCounts } from "./operations";
 import { paidByEntitlement } from "./finance";
 import { isolate } from "@/lib/format";
@@ -187,7 +188,7 @@ export async function uploadStatement(actor: Actor, file: { name: string; mime: 
   assertDistributor(actor);
   const m = uploadMetaSchema.parse(meta ?? {});
   if (!file.data.length) throw new AppError("VALIDATION", "الملف فارغ");
-  if (file.data.length > MAX_STATEMENT_BYTES) throw new AppError("VALIDATION", `حجم الملف يتجاوز ${MAX_STATEMENT_BYTES / 1024 / 1024} ميغابايت`);
+  await assertUploadAllowed(file.name, file.data.length, ["pdf", "xlsx"]);
   const kind = detectKind(file.name, file.mime, file.data.subarray(0, 8));
   // الاستخراج خارج المعاملة لأنه قد يستغرق وقتًا.
   const ex: Extraction = kind === "excel" ? await extractExcel(file.data) : await extractPdf(file.data);

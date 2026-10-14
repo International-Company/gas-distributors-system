@@ -8,9 +8,10 @@ import { useApi, useFormSubmit } from "@/components/api-client";
 type S = {
   systemName: string; contactPhone: string; contactEmail: string; contactAddress: string;
   currencyCode: string; currencySymbol: string; sessionIdleMinutes: number; maxFailedLogins: number; lockoutMinutes: number;
+  allowedFileTypes: string[]; maxUploadMb: number;
 };
 
-export function SettingsForm({ initial }: { initial: S }) {
+export function SettingsForm({ initial, supportedTypes }: { initial: S; supportedTypes: string[] }) {
   const api = useApi();
   const router = useRouter();
   const [v, setV] = useState(initial);
@@ -73,6 +74,35 @@ export function SettingsForm({ initial }: { initial: S }) {
           </Field>
           <Field label="مدة القفل (دقيقة)" htmlFor="s-lock" error={fields.lockoutMinutes}>
             <Input id="s-lock" type="number" min={1} max={1440} value={v.lockoutMinutes} onChange={set("lockoutMinutes")} required />
+          </Field>
+        </div>
+      </Card>
+
+      <Card title="الملفات">
+        <div className="space-y-4">
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium">أنواع الملفات المسموح رفعها</legend>
+            <div className="flex flex-wrap gap-4">
+              {supportedTypes.map((t) => (
+                <label key={t} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="size-4"
+                    checked={v.allowedFileTypes.includes(t)}
+                    onChange={(e) => {
+                      setSaved(false);
+                      setV({ ...v, allowedFileTypes: e.target.checked ? [...v.allowedFileTypes, t] : v.allowedFileTypes.filter((x) => x !== t) });
+                    }}
+                  />
+                  <bdi>.{t}</bdi>
+                </label>
+              ))}
+            </div>
+            {fields.allowedFileTypes && <p className="mt-1 text-xs text-danger">{fields.allowedFileTypes}</p>}
+            <p className="mt-1 text-xs text-muted">الكشوف تقبل PDF و Excel فقط من بين المسموح. الصور للمرفقات (الإعلانات والدعم لاحقًا).</p>
+          </fieldset>
+          <Field label="الحد الأقصى لحجم الملف (ميغابايت)" htmlFor="s-maxmb" error={fields.maxUploadMb} hint="من 1 إلى 50">
+            <Input id="s-maxmb" type="number" min={1} max={50} className="w-32" value={v.maxUploadMb} onChange={(e) => { setSaved(false); setV({ ...v, maxUploadMb: Number(e.target.value) }); }} required />
           </Field>
         </div>
       </Card>

@@ -195,6 +195,14 @@ model SystemSettings {
   sessionIdleMinutes Int      @default(30)
   maxFailedLogins    Int      @default(5)
   lockoutMinutes     Int      @default(15)
+  // الشعار (صورة صغيرة) يُحفظ هنا ويُخدم من /api/v1/settings/logo.
+  logoData           Bytes?
+  logoMime           String?
+  // تخصيص أسماء أقسام القائمة وترتيبها: { "/d/counter": { "label": "...", "order": 1, "hidden": false } }
+  navOverrides       Json     @default("{}")
+  // أنواع الملفات المسموح رفعها (امتدادات) والحد الأقصى لحجم الملف.
+  allowedFileTypes   String[] @default(["pdf", "xlsx", "jpg", "jpeg", "png", "webp"])
+  maxUploadMb        Int      @default(20)
   updatedAt          DateTime @updatedAt
   updatedById        String?  @db.Uuid
 

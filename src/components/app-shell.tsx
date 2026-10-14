@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { Banknote, Receipt, Wallet, Bug, CalendarDays, Cylinder, Factory, ScanLine, Truck, Warehouse, FileSpreadsheet, Flame, GitMerge, History, Home, LogIn, LogOut, Menu, Search, Settings, Shield, ShieldAlert, Tags, User, Users, X } from "lucide-react";
+import { BarChart3, Banknote, Receipt, Wallet, Bug, CalendarDays, Cylinder, Factory, ScanLine, Truck, Warehouse, FileSpreadsheet, Flame, GitMerge, History, Home, LogIn, LogOut, Menu, Search, Settings, Shield, ShieldAlert, Tags, User, Users, X } from "lucide-react";
 import type { NavIcon, NavItem } from "@/lib/nav";
 import { cn } from "./ui";
 import { ThemeToggle } from "./theme";
@@ -13,12 +13,12 @@ const ICONS: Record<NavIcon, typeof Home> = {
   home: Home, users: Users, tags: Tags, shield: Shield, history: History, login: LogIn, bug: Bug, settings: Settings, user: User,
   calendar: CalendarDays, file: FileSpreadsheet, search: Search, merge: GitMerge, alert: ShieldAlert,
   counter: ScanLine, cylinder: Cylinder, truck: Truck, warehouse: Warehouse, factory: Factory,
-  wallet: Wallet, banknote: Banknote, receipt: Receipt,
+  wallet: Wallet, banknote: Banknote, receipt: Receipt, chart: BarChart3,
 };
 
-type Props = { systemName: string; nav: NavItem[]; userName: string; roleLabel: string; children: ReactNode };
+type Props = { systemName: string; logoUrl?: string | null; nav: NavItem[]; userName: string; roleLabel: string; children: ReactNode };
 
-export function AppShell({ systemName, nav, userName, roleLabel, children }: Props) {
+export function AppShell({ systemName, logoUrl, nav, userName, roleLabel, children }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   useEffect(() => setOpen(false), [pathname]);
@@ -28,9 +28,14 @@ export function AppShell({ systemName, nav, userName, roleLabel, children }: Pro
   const sidebar = (
     <nav className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-4">
-        <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-contrast">
-          <Flame className="size-5" />
-        </span>
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt="" className="size-9 rounded-lg object-contain" />
+        ) : (
+          <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-contrast">
+            <Flame className="size-5" />
+          </span>
+        )}
         <span className="text-sm font-bold leading-tight">{systemName}</span>
       </div>
       <ul className="flex-1 space-y-1 overflow-y-auto p-3">

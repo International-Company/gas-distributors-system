@@ -8,6 +8,7 @@ export const ADMIN_PERMISSIONS = {
   "distributors.export": "تصدير قائمة الحسابات",
   "categories.manage": "إدارة تصنيفات الموزّعين",
   "audit.view": "عرض سجل التدقيق ومحاولات الدخول",
+  "reports.view": "عرض التقارير المركزية وتقارير الموزّعين وتصديرها",
   "errors.view": "عرض سجل الأخطاء التقنية",
   "settings.manage": "إدارة إعدادات النظام",
 } as const;
