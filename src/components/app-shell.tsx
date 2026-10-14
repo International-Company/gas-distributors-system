@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { BarChart3, Banknote, RefreshCw, Receipt, Wallet, Bug, CalendarDays, Cylinder, Factory, ScanLine, Truck, Warehouse, FileSpreadsheet, Flame, GitMerge, History, Home, LogIn, LogOut, Menu, Search, Settings, Shield, ShieldAlert, Tags, User, Users, X } from "lucide-react";
-import type { NavIcon, NavItem } from "@/lib/nav";
+import { NAV_GROUPS, type NavIcon, type NavItem } from "@/lib/nav";
 import { cn } from "./ui";
 import { ThemeToggle } from "./theme";
 import { ApiProvider } from "./api-client";
@@ -27,44 +27,60 @@ export function AppShell({ systemName, logoUrl, nav, userName, roleLabel, userId
 
   const isActive = (href: string) => (href === "/admin" || href === "/d" ? pathname === href : pathname.startsWith(href));
 
+  const groups = NAV_GROUPS.filter((g) => g.key !== "account")
+    .map((g) => ({ ...g, items: nav.filter((n) => n.group === g.key) }))
+    .filter((g) => g.items.length);
+  const account = nav.find((n) => n.group === "account");
+
   const sidebar = (
-    <nav className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-4">
+    <nav className="flex h-full flex-col" aria-label="القائمة الرئيسية">
+      <div className="flex items-center gap-3 border-b border-border px-4 py-3.5">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUrl} alt="" className="size-9 rounded-lg object-contain" />
+          <img src={logoUrl} alt="" className="size-10 shrink-0 rounded-xl object-contain" />
         ) : (
-          <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-contrast">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-contrast shadow-sm">
             <Flame className="size-5" />
           </span>
         )}
-        <span className="text-sm font-bold leading-tight">{systemName}</span>
-      </div>
-      <ul className="flex-1 space-y-1 overflow-y-auto p-3">
-        {nav.map((item) => {
-          const Icon = ICONS[item.icon];
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                  isActive(item.href) ? "bg-primary-soft font-semibold text-primary" : "text-text hover:bg-surface-2",
-                )}
-              >
-                <Icon className="size-5 shrink-0" />
-                {item.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-      <div className="border-t border-border p-3">
-        <div className="mb-2 px-1">
-          <div className="truncate text-sm font-medium">{userName}</div>
-          <div className="text-xs text-muted">{roleLabel}</div>
+        <div className="min-w-0">
+          <div className="truncate text-sm font-bold leading-tight">{systemName}</div>
+          <div className="mt-0.5 text-xs text-muted">{offline ? "لوحة الموزّع" : "لوحة الإدارة"}</div>
         </div>
-        <LogoutButton />
+      </div>
+
+      <div className="nav-scroll flex-1 overflow-y-auto px-3 pb-3">
+        {groups.map((g) => (
+          <div key={g.key} className={g.label ? "mt-3" : "mt-2.5"}>
+            {g.label && <div className="mb-0.5 px-3 text-[11px] font-semibold tracking-wide text-muted">{g.label}</div>}
+            <ul className="space-y-0.5">
+              {g.items.map((item) => (
+                <li key={item.href}>
+                  <NavLink item={item} active={isActive(item.href)} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        {/* تلاشٍ خفيف أسفل القائمة يدل على وجود المزيد عند التمرير */}
+        <div className="pointer-events-none sticky bottom-0 -mx-3 h-5 bg-gradient-to-t from-surface to-transparent" aria-hidden />
+      </div>
+
+      <div className="border-t border-border p-3">
+        <div className="flex items-center gap-2 rounded-xl bg-surface-2 p-2">
+          <Link
+            href={account?.href ?? "/account"}
+            className={cn("flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1 hover:bg-surface", isActive("/account") && "ring-1 ring-primary/40")}
+            title="حسابي"
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary"><User className="size-[18px]" /></span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold">{userName}</span>
+              <span className="block text-xs text-muted">{roleLabel} · {account?.label ?? "حسابي"}</span>
+            </span>
+          </Link>
+          <LogoutButton />
+        </div>
       </div>
     </nav>
   );
@@ -108,6 +124,32 @@ export function AppShell({ systemName, logoUrl, nav, userName, roleLabel, userId
   );
 }
 
+function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+  const Icon = ICONS[item.icon];
+  const offline = useOffline();
+  // عدّاد المزامنة: العمليات المعلقة وما يحتاج مراجعة.
+  const badge = item.href === "/d/sync" && offline?.enabled ? { n: offline.unsynced + offline.review, danger: offline.review > 0 } : null;
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "relative flex h-[34px] items-center gap-3 rounded-lg px-3 text-sm transition-colors",
+        active ? "bg-primary-soft font-semibold text-primary" : "text-text/85 hover:bg-surface-2 hover:text-text",
+      )}
+    >
+      {active && <span className="absolute inset-y-1.5 start-0 w-1 rounded-full bg-primary" aria-hidden />}
+      <Icon className={cn("size-[18px] shrink-0", active ? "text-primary" : "text-muted")} />
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      {badge && badge.n > 0 && (
+        <span className={cn("min-w-5 rounded-full px-1.5 text-center text-[11px] font-bold leading-5 tabular-nums", badge.danger ? "bg-danger text-white" : "bg-warning-soft text-warning")}>
+          {badge.n}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 function LogoutButton() {
   const [busy, setBusy] = useState(false);
   const offline = useOffline();
@@ -127,10 +169,11 @@ function LogoutButton() {
         await fetch("/api/v1/auth/logout", { method: "POST" }).catch(() => {});
         window.location.href = "/login";
       }}
-      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-danger hover:bg-danger-soft"
+      className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger-soft hover:text-danger"
+      aria-label="تسجيل الخروج"
+      title="تسجيل الخروج"
     >
-      <LogOut className="size-5" />
-      تسجيل الخروج
+      <LogOut className="size-[18px]" />
     </button>
   );
 }

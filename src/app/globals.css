@@ -99,3 +99,24 @@ dialog::backdrop {
     display: none !important;
   }
 }
+
+/* شريط تمرير القائمة الجانبية: رفيع ويظهر عند المرور فقط */
+.nav-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable;
+}
+.nav-scroll:hover,
+.nav-scroll:focus-within {
+  scrollbar-color: var(--color-border) transparent;
+}
+.nav-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.nav-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+.nav-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}

@@ -94,7 +94,7 @@ export function NavEditor({ rows, overrides }: { rows: NavRow[]; overrides: Reco
   );
   return (
     <Card title="القائمة الجانبية">
-      <p className="mb-3 text-xs text-muted">الإخفاء للتنظيم فقط؛ الوصول الفعلي تحكمه الصلاحيات على الخادم. الترتيب رقم (الأصغر أولًا)؛ يُترك فارغًا للترتيب الافتراضي.</p>
+      <p className="mb-3 text-xs text-muted">الإخفاء للتنظيم فقط؛ الوصول الفعلي تحكمه الصلاحيات على الخادم. الأقسام مجمّعة في القائمة حسب طبيعتها، والترتيب رقم يطبق داخل مجموعة القسم (الأصغر أولًا)؛ يُترك فارغًا للترتيب الافتراضي.</p>
       {run.error && <Alert tone="danger" className="mb-3">{run.error}</Alert>}
       {saved && <Alert tone="success" className="mb-3">حُفظت القائمة.</Alert>}
       <div className="grid gap-6 lg:grid-cols-2">
