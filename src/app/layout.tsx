@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans_Arabic } from "next/font/google";
+import { Cairo } from "next/font/google";
 import { ThemeProvider } from "@/components/theme";
 import { getPublicSettings } from "@/server/services/settings";
 import "./globals.css";
 
-const font = IBM_Plex_Sans_Arabic({ subsets: ["arabic", "latin"], weight: ["400", "500", "600", "700"], variable: "--font-arabic", display: "swap" });
+// خط Cairo (اختيار المالك)، يُخدم من خادم التطبيق نفسه فيعمل دون اتصال.
+const font = Cairo({ subsets: ["arabic", "latin"], weight: ["400", "500", "600", "700"], variable: "--font-arabic", display: "swap" });
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getPublicSettings().catch(() => null);
