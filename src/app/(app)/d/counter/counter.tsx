@@ -185,7 +185,7 @@ export function Counter() {
         () => `سُلّمت الجرة ${isolate(c.label)}.`,
         mayHandOver
           ? `حُفظ تسليم الجرة ${isolate(c.label)} على هذا الجهاز (بانتظار المزامنة).`
-          : `لم يصل تأكيد الخادم لتسليم الجرة ${isolate(c.label)}. لا تسلّمها حتى يظهر التسليم «متزامنًا» في قائمة المزامنة؛ تُعاد المحاولة تلقائيًا.`,
+          : `لم يصل تأكيد الخادم لتسليم الجرة ${isolate(c.label)}. لا تسلّمها حتى يظهر التسليم «متزامنًا» في «شغل بدون نت»؛ تُعاد المحاولة تلقائيًا.`,
       );
     });
 
@@ -245,7 +245,7 @@ export function Counter() {
         <Alert tone="warning">
           <CloudOff className="me-1 inline size-4" />
           <strong>دون اتصال:</strong> تعمل ببيانات محفوظة على هذا الجهاز (آخر تحديث <bdi dir="ltr">{formatDateTime(local.fetchedAt)}</bdi>).
-          العمليات تُحفظ على الجهاز وتُرسل عند عودة الاتصال، والخادم يعيد التحقق منها، وأي تعارض يظهر في <Link href="/d/sync" className="underline">قائمة المزامنة</Link>.
+          العمليات تُحفظ على الجهاز وتُرسل عند عودة الاتصال، والخادم يعيد التحقق منها، وأي تعارض يظهر في <Link href="/d/sync" className="underline">شغل بدون نت</Link>.
           {" "}المسموح دون اتصال: {(["receive", "deliver", "payment"] as OpKind[]).filter(allowed).map((k) => KIND_NAMES[k]).join("، ") || "لا شيء"}.
         </Alert>
       )}

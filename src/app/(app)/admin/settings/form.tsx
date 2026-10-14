@@ -108,7 +108,7 @@ export function SettingsForm({ initial, supportedTypes }: { initial: S; supporte
         </div>
       </Card>
 
-      <Card title="العمل دون اتصال (الشباك)">
+      <Card title="العمل دون اتصال (صفحة التوزيع)">
         <div className="space-y-4">
           <p className="text-sm text-muted">
             العمليات المسموحة تُحفظ على جهاز الموزّع عند انقطاع الإنترنت وتُرسل عند عودته. الخادم يعيد التحقق من كل عملية، وأي تعارض يصبح حالة مراجعة ولا يُحسم تلقائيًا.

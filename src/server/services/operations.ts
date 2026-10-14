@@ -308,7 +308,7 @@ export async function cancelOperationInTx(tx: Tx, actor: DistributorActor, opera
   await lockRow(tx, "cylinders", op0.cylinderId);
   const op = await tx.cylinderOperation.findUniqueOrThrow({ where: { id: operationId }, include: { cylinder: true } });
   if (op.status !== "ACTIVE") throw new AppError("INVALID_STATE", "أُلغيت هذه العملية سابقًا");
-  if (op.shipmentId && !opts.viaShipment) throw new AppError("INVALID_STATE", "هذه التعبئة جزء من شحنة؛ ألغِ الشحنة بدلًا منها");
+  if (op.shipmentId && !opts.viaShipment) throw new AppError("INVALID_STATE", "هذه التعبئة جزء من نقلة؛ ألغِ النقلة بدلًا منها");
   // العمليات التابعة: لا يُلغى استلام جرة عُبئت، ولا تعبئة جرة سُلّمت.
   const later = await tx.cylinderOperation.findFirst({ where: { cylinderId: op.cylinderId, status: "ACTIVE", type: { in: ORDER.slice(ORDER.indexOf(op.type) + 1) } } });
   if (later) {

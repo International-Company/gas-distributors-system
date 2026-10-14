@@ -33,26 +33,26 @@ const aside = dp.locator("aside").first();
 const grp = (name) => aside.getByRole("button", { name });
 
 await dp.goto(BASE + "/d/cylinders"); await dp.waitForLoadState("networkidle");
-check("مجموعة الصفحة الحالية مفتوحة تلقائيًا", (await grp("الجرار والمخزون").getAttribute("aria-expanded")) === "true");
-check("المجموعات الأخرى مطوية افتراضيًا", (await grp("المالية").getAttribute("aria-expanded")) === "false" && (await grp("الكشوف والمواطنون").getAttribute("aria-expanded")) === "false");
+check("مجموعة الصفحة الحالية مفتوحة تلقائيًا", (await grp("الجرار والمخزن").getAttribute("aria-expanded")) === "true");
+check("المجموعات الأخرى مطوية افتراضيًا", (await grp("الفلوس").getAttribute("aria-expanded")) === "false" && (await grp("الناس والكشوفات").getAttribute("aria-expanded")) === "false");
 check("أقسام المجموعة المطوية خارج التنقل بلوحة المفاتيح (inert)", (await aside.locator("#nav-group-money").getAttribute("inert")) !== null);
 check("التقارير قسم مباشر دون عنوان مكرر", (await aside.getByText("التقارير", { exact: true }).count()) === 1);
 check("القسم الحالي مميز (aria-current)", (await aside.locator("[aria-current=page]").textContent()).includes("الجرار"));
 await aside.screenshot({ path: `${OUT}/n-01-default.png` });
 
-await grp("المالية").click();
+await grp("الفلوس").click();
 await dp.waitForTimeout(300);
-check("فتح مجموعة بالنقر", (await grp("المالية").getAttribute("aria-expanded")) === "true" && await aside.getByRole("link", { name: "الصندوق" }).isVisible());
+check("فتح مجموعة بالنقر", (await grp("الفلوس").getAttribute("aria-expanded")) === "true" && await aside.getByRole("link", { name: "الغلّة" }).isVisible());
 await aside.screenshot({ path: `${OUT}/n-02-opened.png` });
-await grp("الجرار والمخزون").click();
+await grp("الجرار والمخزن").click();
 await dp.waitForTimeout(300);
-check("طي مجموعة الصفحة الحالية يُظهر نقطة تدل عليها", (await grp("الجرار والمخزون").getAttribute("aria-expanded")) === "false");
+check("طي مجموعة الصفحة الحالية يُظهر نقطة تدل عليها", (await grp("الجرار والمخزن").getAttribute("aria-expanded")) === "false");
 await dp.reload(); await dp.waitForLoadState("networkidle");
-check("حالة الطي محفوظة بعد إعادة التحميل", (await grp("المالية").getAttribute("aria-expanded")) === "true");
-await aside.getByRole("link", { name: "الصندوق" }).click();
+check("حالة الطي محفوظة بعد إعادة التحميل", (await grp("الفلوس").getAttribute("aria-expanded")) === "true");
+await aside.getByRole("link", { name: "الغلّة" }).click();
 await dp.waitForURL("**/d/finance");
 await dp.goto(BASE + "/d/cylinders"); await dp.waitForLoadState("networkidle");
-check("الانتقال لصفحة في مجموعة مطوية يفتحها", (await grp("الجرار والمخزون").getAttribute("aria-expanded")) === "true");
+check("الانتقال لصفحة في مجموعة مطوية يفتحها", (await grp("الجرار والمخزن").getAttribute("aria-expanded")) === "true");
 
 const dd = await b.newContext({ viewport: { width: 1280, height: 760 }, colorScheme: "dark", storageState: await d.storageState() });
 const ddp = await dd.newPage(); await ddp.goto(BASE + "/d/collections"); await ddp.waitForLoadState("networkidle");

@@ -20,7 +20,7 @@ export default async function StationPage({ params, searchParams }: { params: Pr
     <div className="space-y-6">
       <PageHeader title={`حساب ${s.name}`} actions={!s.active ? <Badge>غير نشطة</Badge> : undefined} />
       <div className="grid grid-cols-3 gap-3">
-        <Stat label="قيمة الشحنات المستلمة" value={formatMoney(acc.totals.value)} />
+        <Stat label="قيمة النقلات المستلمة" value={formatMoney(acc.totals.value)} />
         <Stat label="المدفوع" value={formatMoney(acc.totals.paid)} tone="success" />
         <Stat label={remaining.isNeg() ? "دفع مقدم للمحطة" : "المتبقي للمحطة"} value={formatMoney(remaining.abs())} tone={remaining.gt(0) ? "warning" : "primary"} />
       </div>
@@ -45,7 +45,7 @@ export default async function StationPage({ params, searchParams }: { params: Pr
                 <tr className="border-b border-border">
                   <th className="py-2 font-medium">التاريخ</th>
                   <th className="py-2 font-medium">البيان</th>
-                  <th className="py-2 font-medium">مدين (شحنة)</th>
+                  <th className="py-2 font-medium">مدين (نقلة)</th>
                   <th className="py-2 font-medium">دائن (دفعة)</th>
                   <th className="py-2 font-medium">الرصيد</th>
                   <th className="py-2" />

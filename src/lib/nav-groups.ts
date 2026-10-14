@@ -5,10 +5,10 @@ export type NavIcon = "home" | "users" | "tags" | "shield" | "history" | "login"
 export type NavGroup = "main" | "work" | "records" | "stock" | "money" | "insight" | "people" | "oversight" | "system" | "account";
 export const NAV_GROUPS: { key: NavGroup; label: string | null }[] = [
   { key: "main", label: null },
-  { key: "work", label: "العمل اليومي" },
-  { key: "records", label: "الكشوف والمواطنون" },
-  { key: "stock", label: "الجرار والمخزون" },
-  { key: "money", label: "المالية" },
+  { key: "work", label: "شغل اليوم" },
+  { key: "records", label: "الناس والكشوفات" },
+  { key: "stock", label: "الجرار والمخزن" },
+  { key: "money", label: "الفلوس" },
   { key: "people", label: "إدارة الموزّعين" },
   { key: "oversight", label: "الرقابة والتقارير" },
   { key: "insight", label: "التقارير" },

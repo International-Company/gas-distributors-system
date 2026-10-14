@@ -6,7 +6,7 @@ import { CylinderStatusBadge } from "@/components/cylinder-status";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { CancelShipment } from "./cancel";
 
-export const metadata = { title: "شحنة" };
+export const metadata = { title: "نقلة" };
 
 export default async function ShipmentPage({ params }: { params: Promise<{ id: string }> }) {
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
@@ -14,7 +14,7 @@ export default async function ShipmentPage({ params }: { params: Promise<{ id: s
   const s = await getShipment(actor, id);
   return (
     <div className="space-y-6">
-      <PageHeader title={`شحنة ${s.station.name}`} actions={s.status === "CANCELLED" ? <Badge tone="danger">ملغاة</Badge> : <Badge tone="success">مستلمة</Badge>} />
+      <PageHeader title={`نقلة ${s.station.name}`} actions={s.status === "CANCELLED" ? <Badge tone="danger">ملغاة</Badge> : <Badge tone="success">مستلمة</Badge>} />
       <Card title="البيانات">
         <DetailList
           items={[
@@ -24,16 +24,16 @@ export default async function ShipmentPage({ params }: { params: Promise<{ id: s
             ["منها جرار مواطنين", s.linkedCount],
             ["منها كمية إضافية", s.extraCount],
             ["سعر شراء الجرة", formatMoney(s.unitPrice, s.currencyCode)],
-            ["قيمة الشحنة", formatMoney(s.unitPrice.mul(s.quantity), s.currencyCode)],
+            ["قيمة النقلة", formatMoney(s.unitPrice.mul(s.quantity), s.currencyCode)],
             ["المرجع", s.reference ?? "—"],
             ["ملاحظات", s.notes ?? "—"],
             ["تاريخ التسجيل", formatDateTime(s.createdAt)],
             ...(s.cancelReason ? ([["سبب الإلغاء", `${s.cancelReason} (${formatDateTime(s.cancelledAt)})`]] as [string, string][]) : []),
           ]}
         />
-        <p className="mt-3 text-xs text-muted">استلام الشحنة لا يعني دفع قيمتها. الدفعات تُسجل من <Link className="text-primary hover:underline" href={`/d/stations/${s.station.id}`}>حساب المحطة</Link>.</p>
+        <p className="mt-3 text-xs text-muted">استلام النقلة لا يعني دفع قيمتها. الدفعات تُسجل من <Link className="text-primary hover:underline" href={`/d/stations/${s.station.id}`}>حساب المحطة</Link>.</p>
       </Card>
-      <Card title="جرار المواطنين المعبأة ضمن الشحنة">
+      <Card title="جرار المواطنين المعبأة ضمن النقلة">
         {s.fills.length === 0 ? (
           <EmptyState>لا توجد.</EmptyState>
         ) : (

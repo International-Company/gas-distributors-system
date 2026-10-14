@@ -7,7 +7,7 @@ import { CancelRecord } from "../finance/cancel-record";
 import { NewExpense } from "./new-expense";
 import { DateInput } from "@/components/date-input";
 
-export const metadata = { title: "المصروفات" };
+export const metadata = { title: "المصاريف" };
 
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
@@ -16,7 +16,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const data = await listExpenses(actor, { ...params, page: sp.page });
   return (
     <div className="space-y-6">
-      <PageHeader title="المصروفات التشغيلية" />
+      <PageHeader title="المصاريف" />
       <NewExpense />
       <form method="get" className="flex flex-wrap gap-2">
         <DateInput name="from" defaultValue={sp.from} className="w-40" aria-label="من" />

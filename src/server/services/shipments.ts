@@ -104,7 +104,7 @@ export async function receiveShipment(actor: Actor, input: unknown) {
   assertDistributor(actor);
   const v = shipmentSchema.parse(input);
   const linked = new Set(v.cylinderIds);
-  if (linked.size !== v.cylinderIds.length) throw new AppError("VALIDATION", "جرة مكررة في الشحنة");
+  if (linked.size !== v.cylinderIds.length) throw new AppError("VALIDATION", "جرة مكررة في النقلة");
   if (linked.size > v.quantity) throw new AppError("VALIDATION", "عدد جرار المواطنين المختارة أكبر من عدد الجرار المستلمة", { quantity: "العدد أقل من المختار" });
   const find = () => withTenant(actor.distributorId, (tx) => tx.shipment.findUnique({ where: { distributorId_idempotencyKey: { distributorId: actor.distributorId, idempotencyKey: v.clientOpId } } }));
   const existing = await find();
@@ -116,7 +116,7 @@ export async function receiveShipment(actor: Actor, input: unknown) {
       if (!station.active) throw new AppError("INVALID_STATE", "المحطة غير نشطة");
       const extra = v.quantity - linked.size;
       const unitPrice = v.unitPrice ?? station.defaultUnitPrice?.toString() ?? null;
-      if (unitPrice === null) throw new AppError("VALIDATION", "أدخل سعر شراء الجرة من المحطة لهذه الشحنة", { unitPrice: "السعر مطلوب" });
+      if (unitPrice === null) throw new AppError("VALIDATION", "أدخل سعر شراء الجرة من المحطة لهذه النقلة", { unitPrice: "السعر مطلوب" });
       const settings = await getSettings(tx);
       const sh = await tx.shipment.create({
         data: {
@@ -146,13 +146,13 @@ export async function cancelShipment(actor: Actor, shipmentId: string, input: un
   const { reason } = z.object({ reason: z.string().trim().min(3, "يرجى كتابة سبب الإلغاء").max(500) }).parse(input);
   return withTenant(actor.distributorId, async (tx) => {
     const locked = await tx.$queryRaw<{ id: string }[]>`SELECT "id" FROM "shipments" WHERE "id" = ${shipmentId}::uuid FOR UPDATE`;
-    if (!locked.length) throw notFound("الشحنة");
+    if (!locked.length) throw notFound("النقلة");
     const sh = await tx.shipment.findUniqueOrThrow({ where: { id: shipmentId }, include: { fills: { where: { status: "ACTIVE" } } } });
-    if (sh.status !== "ACTIVE") throw new AppError("INVALID_STATE", "أُلغيت هذه الشحنة سابقًا");
-    for (const f of sh.fills) await cancelOperationInTx(tx, actor, f.id, `إلغاء الشحنة: ${reason}`, { viaShipment: true });
+    if (sh.status !== "ACTIVE") throw new AppError("INVALID_STATE", "أُلغيت هذه النقلة سابقًا");
+    for (const f of sh.fills) await cancelOperationInTx(tx, actor, f.id, `إلغاء النقلة: ${reason}`, { viaShipment: true });
     if (sh.extraCount > 0) {
       const mv = await tx.inventoryMovement.findFirst({ where: { shipmentId: sh.id, type: "SHIPMENT_EXTRA" } });
-      if (mv) await reverseMovement(tx, actor, mv.id, `إلغاء الشحنة: ${reason}`);
+      if (mv) await reverseMovement(tx, actor, mv.id, `إلغاء النقلة: ${reason}`);
     }
     await tx.shipment.update({ where: { id: sh.id }, data: { status: "CANCELLED", cancelledAt: new Date(), cancelledById: actor.userId, cancelReason: reason } });
     await audit(tx, actor, { action: "shipment.cancel", entityType: "shipment", entityId: sh.id, distributorId: actor.distributorId, before: { status: "ACTIVE" }, after: { status: "CANCELLED", reversedFills: sh.fills.length, extra: sh.extraCount }, reason });
@@ -182,7 +182,7 @@ export async function getShipment(actor: Actor, id: string) {
         fills: { include: { cylinder: { include: { entitlement: { select: { nameInStatement: true, cycle: { select: { name: true } } } } } } }, orderBy: { at: "asc" } },
       },
     });
-    if (!sh) throw notFound("الشحنة");
+    if (!sh) throw notFound("النقلة");
     return sh;
   });
 }

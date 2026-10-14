@@ -8,7 +8,7 @@ import { formatDateTime, formatMoney } from "@/lib/format";
 import { CancelRecord } from "../finance/cancel-record";
 import { DateInput } from "@/components/date-input";
 
-export const metadata = { title: "التحصيلات" };
+export const metadata = { title: "المقبوض" };
 
 export default async function CollectionsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
@@ -17,7 +17,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
   const [data, cycles] = await Promise.all([listPayments(actor, { ...params, page: sp.page }), listCycles(actor)]);
   return (
     <div className="space-y-6">
-      <PageHeader title="التحصيلات" />
+      <PageHeader title="المقبوض" />
       <form method="get" className="flex flex-wrap gap-2 rounded-xl border border-border bg-surface p-3">
         <Select name="cycleId" defaultValue={sp.cycleId ?? ""} className="w-48" aria-label="الدورة">
           <option value="">كل الدورات</option>

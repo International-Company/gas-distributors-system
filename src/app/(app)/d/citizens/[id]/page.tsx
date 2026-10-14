@@ -108,7 +108,7 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
         )}
       </Card>
 
-      <Card title="التحصيلات">
+      <Card title="المقبوض">
         {p.entitlements.every((e) => e.payments.length === 0) ? (
           <EmptyState>لا توجد تحصيلات.</EmptyState>
         ) : (

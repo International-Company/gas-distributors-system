@@ -36,7 +36,7 @@ export function StationsManager({ rows }: { rows: S[] }) {
         <form onSubmit={create.submit} className="grid gap-3 sm:grid-cols-4">
           {create.error && <Alert tone="danger" className="sm:col-span-4">{create.error}</Alert>}
           <Field label="الاسم" htmlFor="st-name" error={create.fields.name}><Input id="st-name" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} required /></Field>
-          <Field label="سعر شراء الجرة الافتراضي" htmlFor="st-price" error={create.fields.defaultUnitPrice} hint="يُقترح عند تسجيل الشحنة"><Input id="st-price" dir="ltr" inputMode="decimal" value={v.defaultUnitPrice} onChange={(e) => setV({ ...v, defaultUnitPrice: e.target.value })} /></Field>
+          <Field label="سعر شراء الجرة الافتراضي" htmlFor="st-price" error={create.fields.defaultUnitPrice} hint="يُقترح عند تسجيل النقلة"><Input id="st-price" dir="ltr" inputMode="decimal" value={v.defaultUnitPrice} onChange={(e) => setV({ ...v, defaultUnitPrice: e.target.value })} /></Field>
           <Field label="الهاتف" htmlFor="st-phone"><Input id="st-phone" dir="ltr" value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} /></Field>
           <Field label="ملاحظات" htmlFor="st-notes"><Input id="st-notes" value={v.notes} onChange={(e) => setV({ ...v, notes: e.target.value })} /></Field>
           <div><Button type="submit" loading={create.busy}>إضافة</Button></div>
@@ -52,7 +52,7 @@ export function StationsManager({ rows }: { rows: S[] }) {
               <div className="text-sm">
                 <Link href={`/d/stations/${s.id}`} className="font-semibold text-primary hover:underline">{s.name}</Link> {!s.active && <Badge>غير نشطة</Badge>}
                 <div className="text-xs text-muted">
-                  {s.defaultUnitPrice ? <>سعر الجرة: {formatMoney(s.defaultUnitPrice)}</> : "دون سعر افتراضي"} · {s.shipments} شحنة {s.phone && <>· <bdi dir="ltr">{s.phone}</bdi></>}
+                  {s.defaultUnitPrice ? <>سعر الجرة: {formatMoney(s.defaultUnitPrice)}</> : "دون سعر افتراضي"} · {s.shipments} نقلة {s.phone && <>· <bdi dir="ltr">{s.phone}</bdi></>}
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-4 text-sm">

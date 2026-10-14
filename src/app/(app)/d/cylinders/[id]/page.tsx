@@ -40,7 +40,7 @@ export default async function CylinderPage({ params }: { params: Promise<{ id: s
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-medium">
                   {OPERATION_LABELS[o.type]}
-                  {o.shipment && <span className="text-muted"> — ضمن شحنة <Link className="text-primary hover:underline" href={`/d/shipments/${o.shipment.id}`}>{o.shipment.station.name}{o.shipment.reference ? ` (${o.shipment.reference})` : ""}</Link></span>}
+                  {o.shipment && <span className="text-muted"> — ضمن نقلة <Link className="text-primary hover:underline" href={`/d/shipments/${o.shipment.id}`}>{o.shipment.station.name}{o.shipment.reference ? ` (${o.shipment.reference})` : ""}</Link></span>}
                   {o.weightKg && <span className="text-xs text-muted"> · الوزن: <bdi>{o.weightKg.toFixed(2)}</bdi> كغ</span>}
                   {o.identityMethod && <span className="text-xs text-muted"> · الهوية: {o.identityMethod === "ID_SCAN" ? "من صورة البطاقة" : "إدخال يدوي من البطاقة"}</span>}
                 </span>
@@ -55,7 +55,7 @@ export default async function CylinderPage({ params }: { params: Promise<{ id: s
         </ul>
       </Card>
       {last && !last.shipmentId && <CancelOperation operationId={last.id} label={OPERATION_LABELS[last.type]} />}
-      {last?.shipmentId && <p className="text-sm text-muted">آخر عملية تعبئة ضمن شحنة؛ تُلغى من صفحة الشحنة.</p>}
+      {last?.shipmentId && <p className="text-sm text-muted">آخر عملية تعبئة ضمن نقلة؛ تُلغى من صفحة النقلة.</p>}
     </div>
   );
 }

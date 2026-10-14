@@ -14,11 +14,11 @@ export function CancelShipment({ id }: { id: string }) {
   return (
     <Card title="تصحيح">
       {!open ? (
-        <Button variant="secondary" onClick={() => setOpen(true)}>إلغاء الشحنة</Button>
+        <Button variant="secondary" onClick={() => setOpen(true)}>إلغاء النقلة</Button>
       ) : (
         <form onSubmit={run.submit} className="space-y-3">
           {run.error && <Alert tone="danger">{run.error}</Alert>}
-          <Alert tone="warning">تُلغى تعبئة كل جرار الشحنة (تعود فارغة) وتُعكس الكمية الإضافية مرة واحدة. يُرفض الإلغاء إن سُلّمت أي جرة منها.</Alert>
+          <Alert tone="warning">تُلغى تعبئة كل جرار النقلة (تعود فارغة) وتُعكس الكمية الإضافية مرة واحدة. يُرفض الإلغاء إن سُلّمت أي جرة منها.</Alert>
           <Field label="سبب الإلغاء" htmlFor="sh-reason" error={run.fields.reason}>
             <Textarea id="sh-reason" value={reason} onChange={(e) => setReason(e.target.value)} required />
           </Field>

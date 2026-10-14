@@ -4,7 +4,7 @@ import { mergeSuggestions } from "@/server/services/citizens";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
 import { MergeActions } from "./actions";
 
-export const metadata = { title: "اقتراحات الدمج" };
+export const metadata = { title: "أسماء مكررة" };
 
 export default async function MergePage() {
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
@@ -12,7 +12,7 @@ export default async function MergePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="اقتراحات الدمج"
+        title="أسماء مكررة"
       />
       {pairs.length === 0 ? (
         <EmptyState>لا توجد اقتراحات.</EmptyState>

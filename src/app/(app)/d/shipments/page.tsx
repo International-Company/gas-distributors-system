@@ -7,7 +7,7 @@ import { Pagination } from "@/components/pagination";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { NewShipment } from "./new-shipment";
 
-export const metadata = { title: "الشحنات" };
+export const metadata = { title: "نقلات المحطة" };
 
 export default async function ShipmentsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
@@ -19,15 +19,15 @@ export default async function ShipmentsPage({ searchParams }: { searchParams: Pr
   ]);
   return (
     <div className="space-y-6">
-      <PageHeader title="شحنات المحطات" />
+      <PageHeader title="نقلات المحطة" />
       <NewShipment
         stations={stations.filter((s) => s.active).map((s) => ({ id: s.id, name: s.name, defaultUnitPrice: s.defaultUnitPrice?.toString() ?? "" }))}
         empties={empties.rows.map((c) => ({ id: c.id, label: c.label, name: c.entitlement.nameInStatement, cycleName: c.entitlement.cycle.name }))}
         emptiesTotal={empties.total}
       />
-      <Card title="الشحنات المستلمة">
+      <Card title="النقلات المستلمة">
         {data.rows.length === 0 ? (
-          <EmptyState>لا توجد شحنات.</EmptyState>
+          <EmptyState>لا توجد نقلات.</EmptyState>
         ) : (
           <ul className="divide-y divide-border">
             {data.rows.map((s) => (

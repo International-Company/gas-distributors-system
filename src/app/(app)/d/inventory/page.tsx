@@ -7,7 +7,7 @@ import { MOVEMENT_LABELS } from "@/components/cylinder-status";
 import { formatDateTime } from "@/lib/format";
 import { DateInput } from "@/components/date-input";
 
-export const metadata = { title: "المخزون" };
+export const metadata = { title: "المخزن" };
 
 const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `${n}` : "");
 
@@ -18,11 +18,11 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const [inv, moves] = await Promise.all([getInventory(actor), listMovements(actor, { ...params, page: sp.page })]);
   return (
     <div className="space-y-6">
-      <PageHeader title="المخزون" />
+      <PageHeader title="المخزن" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Link href="/d/cylinders?status=EMPTY"><Stat label="فارغة (جرار مواطنين)" value={inv.balance.empty} tone="warning" /></Link>
         <Link href="/d/cylinders?status=FILLED"><Stat label="معبأة جاهزة (جرار مواطنين)" value={inv.balance.filled} tone="primary" /></Link>
-        <Stat label="معبأة إضافية من الشحنات" value={inv.balance.extra} />
+        <Stat label="معبأة إضافية من النقلات" value={inv.balance.extra} />
         <Link href="/d/cylinders?status=DELIVERED"><Stat label="مسلّمة (إجمالي)" value={inv.delivered} tone="success" /></Link>
       </div>
       {inv.reconciled ? (
@@ -32,7 +32,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
           الرصيد لا يطابق حالات الجرار (المتوقع: فارغة {inv.expected.empty}، معبأة {inv.expected.filled}، إضافية {inv.expected.extra}). هذا خلل يحتاج مراجعة؛ لم يُصحح تلقائيًا.
         </Alert>
       )}
-      <Card title="سجل حركة المخزون">
+      <Card title="سجل حركة المخزن">
         <form method="get" className="mb-3 flex flex-wrap gap-2">
           <Select name="type" defaultValue={sp.type ?? ""} className="w-48" aria-label="نوع الحركة">
             <option value="">كل الحركات</option>
@@ -66,7 +66,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                     <td className="py-2">{MOVEMENT_LABELS[m.type]}{m.note && <div className="text-xs text-muted">{m.note}</div>}</td>
                     <td className="py-2">
                       {m.cylinder && <Link className="text-primary hover:underline" href={`/d/cylinders/${m.cylinder.id}`}><bdi dir="ltr">{m.cylinder.label}</bdi></Link>}
-                      {!m.cylinder && m.shipmentId && <Link className="text-primary hover:underline" href={`/d/shipments/${m.shipmentId}`}>شحنة</Link>}
+                      {!m.cylinder && m.shipmentId && <Link className="text-primary hover:underline" href={`/d/shipments/${m.shipmentId}`}>نقلة</Link>}
                     </td>
                     <td className="py-2 ltr-nums">{signed(m.emptyDelta)}</td>
                     <td className="py-2 ltr-nums">{signed(m.filledDelta)}</td>

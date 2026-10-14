@@ -327,7 +327,7 @@ export async function stationAccount(actor: Actor, stationId: string, filters: u
     const entries: Entry[] = [
       ...shipments.filter((s) => inRange(s.receivedAt)).map((s) => ({
         at: s.receivedAt, kind: "SHIPMENT" as const, id: s.id, debit: shipmentValue(s), credit: ZERO,
-        description: `شحنة ${s.quantity} جرة × ${s.unitPrice.toFixed(2)}${s.reference ? ` (${s.reference})` : ""}`, cancelled: s.status !== "ACTIVE", cancelReason: s.cancelReason,
+        description: `نقلة ${s.quantity} جرة × ${s.unitPrice.toFixed(2)}${s.reference ? ` (${s.reference})` : ""}`, cancelled: s.status !== "ACTIVE", cancelReason: s.cancelReason,
       })),
       ...payments.filter((p) => inRange(p.paidAt)).map((p) => ({
         at: p.paidAt, kind: "PAYMENT" as const, id: p.id, debit: ZERO, credit: p.amount,

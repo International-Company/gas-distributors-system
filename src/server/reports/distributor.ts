@@ -255,7 +255,7 @@ export const DISTRIBUTOR_REPORTS: ReportDef[] = [
         WHERE o."status" = 'ACTIVE' AND ${r.sql} ${type ? Prisma.sql`AND o."type" = ${type}::"OperationType"` : Prisma.empty}
         ORDER BY o."at" ASC ${limit}`;
       const LABEL: Record<string, string> = { RECEIVE_EMPTY: "استلام فارغة", FILL: "تعبئة", DELIVER: "تسليم" };
-      const rows = raw.map((x) => ({ at: plainDateTime(x.at), type: LABEL[x.type], label: x.label, name: x.name, cycle: x.cycle, source: x.shipment ? `شحنة ${x.shipment}` : "", user: x.user ?? "" }));
+      const rows = raw.map((x) => ({ at: plainDateTime(x.at), type: LABEL[x.type], label: x.label, name: x.name, cycle: x.cycle, source: x.shipment ? `نقلة ${x.shipment}` : "", user: x.user ?? "" }));
       const count = (t: string) => raw.filter((x) => x.type === t).length;
       return {
         title: "الجرار المستلمة والمعبأة والمسلّمة",
@@ -392,7 +392,7 @@ export const DISTRIBUTOR_REPORTS: ReportDef[] = [
   {
     key: "stations",
     title: "حسابات محطات التعبئة",
-    description: "قيمة الشحنات المستلمة والمدفوع والمتبقي لكل محطة.",
+    description: "قيمة النقلات المستلمة والمدفوع والمتبقي لكل محطة.",
     filters: [],
     async run(tx) {
       const raw = await tx.$queryRaw<{ name: string; shipments: bigint; cylinders: bigint; value: Prisma.Decimal; paid: Prisma.Decimal }[]>`
@@ -407,8 +407,8 @@ export const DISTRIBUTOR_REPORTS: ReportDef[] = [
         title: "حسابات محطات التعبئة",
         filtersText: ["الرصيد الموجب مستحق للمحطة، والسالب دفع مقدم"],
         columns: [
-          { key: "name", label: "المحطة" }, { key: "shipments", label: "الشحنات", type: "number" }, { key: "cylinders", label: "الجرار المستلمة", type: "number" },
-          { key: "value", label: "قيمة الشحنات", type: "money" }, { key: "paid", label: "المدفوع", type: "money" }, { key: "remaining", label: "المتبقي", type: "money" },
+          { key: "name", label: "المحطة" }, { key: "shipments", label: "النقلات", type: "number" }, { key: "cylinders", label: "الجرار المستلمة", type: "number" },
+          { key: "value", label: "قيمة النقلات", type: "money" }, { key: "paid", label: "المدفوع", type: "money" }, { key: "remaining", label: "المتبقي", type: "money" },
         ],
         rows,
         totals: { name: "الإجمالي", value: sumMoney(rows, "value"), paid: sumMoney(rows, "paid"), remaining: sumMoney(rows, "remaining") },
@@ -426,7 +426,7 @@ export const DISTRIBUTOR_REPORTS: ReportDef[] = [
         SELECT m."at", m."type"::text AS type, m."emptyDelta", m."filledDelta", m."extraDelta", m."emptyAfter", m."filledAfter", m."extraAfter",
           (SELECT z."label" FROM "cylinder_operations" o JOIN "cylinders" z ON z."id" = o."cylinderId" WHERE o."id" = m."operationId") AS label, m."note"
         FROM "inventory_movements" m WHERE ${r.sql} ORDER BY m."id" ASC ${limit}`;
-      const LABEL: Record<string, string> = { RECEIVE_EMPTY: "استلام فارغة", FILL: "تعبئة", DELIVER: "تسليم", SHIPMENT_EXTRA: "شحنة: كمية إضافية", REVERSAL: "عكس حركة (إلغاء)" };
+      const LABEL: Record<string, string> = { RECEIVE_EMPTY: "استلام فارغة", FILL: "تعبئة", DELIVER: "تسليم", SHIPMENT_EXTRA: "نقلة: كمية إضافية", REVERSAL: "عكس حركة (إلغاء)" };
       const sign = (v: number) => (v > 0 ? `+${v}` : v < 0 ? String(v) : "");
       const rows = raw.map((m) => ({
         at: plainDateTime(m.at), type: LABEL[m.type], label: m.label ?? "", empty: sign(m.emptyDelta), filled: sign(m.filledDelta), extra: sign(m.extraDelta),

@@ -6,7 +6,7 @@ import { STATEMENT_STATUS, StatementStatusBadge } from "@/components/statement-s
 import { formatDateTime } from "@/lib/format";
 import { UploadForm } from "./upload-form";
 
-export const metadata = { title: "الكشوف" };
+export const metadata = { title: "الكشوفات" };
 
 export default async function StatementsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
@@ -15,7 +15,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
   const [list, approved] = await Promise.all([listStatements(actor, { status }), listStatements(actor, { status: "APPROVED" })]);
   return (
     <div className="space-y-6">
-      <PageHeader title="كشوف هيئة الغاز" />
+      <PageHeader title="الكشوفات" />
       <Card title="استيراد كشف">
         <UploadForm approved={approved.map((s) => ({ id: s.id, title: s.title, version: s.version, cycleName: s.cycle?.name ?? "" }))} />
       </Card>

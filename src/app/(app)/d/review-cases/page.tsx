@@ -4,7 +4,7 @@ import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 import { NewCase, ResolveCase } from "./actions";
 
-export const metadata = { title: "حالات المراجعة" };
+export const metadata = { title: "مشاكل بدها حل" };
 
 const TYPE_LABELS: Record<string, { label: string; tone: "neutral" | "danger" | "warning" }> = {
   NOT_IN_STATEMENT: { label: "غير موجود في كشف", tone: "neutral" },
@@ -19,7 +19,7 @@ export default async function ReviewCasesPage({ searchParams }: { searchParams: 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="حالات المراجعة"
+        title="مشاكل بدها حل"
       />
       <NewCase initialOpen={sp.new === "1"} initial={{ nationalId: sp.nationalId ?? "", fullName: sp.fullName ?? "" }} />
       {cases.length === 0 ? (

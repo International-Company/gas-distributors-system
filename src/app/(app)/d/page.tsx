@@ -16,7 +16,7 @@ export default async function DistributorHome() {
     <div className="space-y-6">
       <PageHeader
         title={`مرحبًا، ${d.name}`}
-        actions={<Link href="/d/counter" className={buttonClass()}><ScanLine className="size-4" /> الشباك</Link>}
+        actions={<Link href="/d/counter" className={buttonClass()}><ScanLine className="size-4" /> التوزيع</Link>}
       />
       {daysLeft !== null && daysLeft <= 7 && (
         <Alert tone="warning">

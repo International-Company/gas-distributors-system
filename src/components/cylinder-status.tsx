@@ -14,5 +14,5 @@ export function CylinderStatusBadge({ status }: { status: string }) {
 
 export const OPERATION_LABELS: Record<string, string> = { RECEIVE_EMPTY: "استلام فارغة", FILL: "تعبئة", DELIVER: "تسليم" };
 export const MOVEMENT_LABELS: Record<string, string> = {
-  RECEIVE_EMPTY: "استلام فارغة", FILL: "تعبئة", DELIVER: "تسليم", SHIPMENT_EXTRA: "شحنة: كمية إضافية", REVERSAL: "عكس حركة (إلغاء)",
+  RECEIVE_EMPTY: "استلام فارغة", FILL: "تعبئة", DELIVER: "تسليم", SHIPMENT_EXTRA: "نقلة: كمية إضافية", REVERSAL: "عكس حركة (إلغاء)",
 };

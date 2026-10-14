@@ -53,7 +53,7 @@ export function CylinderTable({ rows, selectable }: { rows: Row[]; selectable: b
           <Button size="sm" variant="secondary" onClick={() => setSel(new Set(rows.map((r) => r.id)))}>تحديد الكل في الصفحة</Button>
           <Button size="sm" variant="ghost" onClick={() => setSel(new Set())}>إلغاء التحديد</Button>
           <Button size="sm" disabled={!sel.size} loading={busy} onClick={fill}><Flame className="size-4" /> تعبئة المحدد ({sel.size})</Button>
-          <span className="text-xs text-muted">للجرار التي وصلت معبأة ضمن شحنة من محطة، سجّلها من صفحة الشحنات.</span>
+          <span className="text-xs text-muted">للجرار التي وصلت معبأة ضمن نقلة من محطة، سجّلها من صفحة النقلات.</span>
         </div>
       )}
       <ul className="divide-y divide-border rounded-xl border border-border bg-surface">

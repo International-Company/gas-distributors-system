@@ -45,7 +45,7 @@ export function NewShipment({ stations, empties, emptiesTotal }: { stations: { i
     } catch (err) {
       if (!(err instanceof ApiError && err.code === "NETWORK")) key.current = null;
       if (err instanceof ApiError) setFields(err.fields);
-      setError(err instanceof Error ? err.message : "تعذر تسجيل الشحنة");
+      setError(err instanceof Error ? err.message : "تعذر تسجيل النقلة");
       setBusy(false);
     }
   };
@@ -53,16 +53,16 @@ export function NewShipment({ stations, empties, emptiesTotal }: { stations: { i
   if (!stations.length) {
     return <Alert tone="warning">أضف محطة تعبئة أولًا من <Link className="underline" href="/d/stations">صفحة المحطات</Link>.</Alert>;
   }
-  if (!open) return <Button onClick={() => setOpen(true)}><Truck className="size-4" /> تسجيل شحنة مستلمة</Button>;
+  if (!open) return <Button onClick={() => setOpen(true)}><Truck className="size-4" /> تسجيل نقلة مستلمة</Button>;
 
   return (
-    <Card title="تسجيل شحنة مستلمة">
+    <Card title="تسجيل نقلة مستلمة">
       <form onSubmit={submit} className="space-y-4">
         {error && <Alert tone="danger">{error}</Alert>}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="المحطة" htmlFor="sh-st"><Select id="sh-st" value={v.stationId} onChange={(e) => setV({ ...v, stationId: e.target.value, unitPrice: stations.find((s) => s.id === e.target.value)?.defaultUnitPrice ?? "" })}>{stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></Field>
           <Field label="عدد الجرار المستلمة" htmlFor="sh-q" error={fields.quantity}><Input id="sh-q" dir="ltr" inputMode="numeric" value={v.quantity} onChange={(e) => setV({ ...v, quantity: e.target.value.replace(/\D/g, "") })} required /></Field>
-          <Field label="سعر شراء الجرة من المحطة" htmlFor="sh-price" error={fields.unitPrice} hint="مقترح من سعر المحطة، ويمكن تعديله لهذه الشحنة"><Input id="sh-price" dir="ltr" inputMode="decimal" value={v.unitPrice} onChange={(e) => setV({ ...v, unitPrice: e.target.value })} required /></Field>
+          <Field label="سعر شراء الجرة من المحطة" htmlFor="sh-price" error={fields.unitPrice} hint="مقترح من سعر المحطة، ويمكن تعديله لهذه النقلة"><Input id="sh-price" dir="ltr" inputMode="decimal" value={v.unitPrice} onChange={(e) => setV({ ...v, unitPrice: e.target.value })} required /></Field>
           <Field label="وقت الاستلام" htmlFor="sh-at" hint="الآن إن تُرك فارغًا"><DateInput id="sh-at" withTime value={v.receivedAt} onChange={(x) => setV({ ...v, receivedAt: x })} placeholder="الآن" /></Field>
           <Field label="المرجع (اختياري)" htmlFor="sh-ref"><Input id="sh-ref" value={v.reference} onChange={(e) => setV({ ...v, reference: e.target.value })} /></Field>
           <Field label="ملاحظات (اختياري)" htmlFor="sh-notes" className="sm:col-span-2"><Textarea id="sh-notes" className="min-h-10" value={v.notes} onChange={(e) => setV({ ...v, notes: e.target.value })} /></Field>
@@ -70,7 +70,7 @@ export function NewShipment({ stations, empties, emptiesTotal }: { stations: { i
 
         <div className="rounded-lg border border-border">
           <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
-            <span className="text-sm font-medium">جرار المواطنين في الشحنة (الفارغة المستلمة سابقًا)</span>
+            <span className="text-sm font-medium">جرار المواطنين في النقلة (الفارغة المستلمة سابقًا)</span>
             <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="تصفية بالرقم أو الاسم" className="h-8 w-48" />
             <Button type="button" size="sm" variant="secondary" disabled={!qty} onClick={pickFirst}>تحديد أول {qty || "N"}</Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setSel(new Set())}>مسح</Button>
@@ -97,10 +97,10 @@ export function NewShipment({ stations, empties, emptiesTotal }: { stations: { i
         <div className={`rounded-lg p-3 text-sm ${extra < 0 ? "bg-danger-soft text-danger" : "bg-surface-2"}`}>
           المستلم {qty} = جرار مواطنين {sel.size} + كمية إضافية غير مرتبطة {Math.max(0, extra)}
           {extra < 0 && " — عدد المختار أكبر من المستلم"}
-          {qty > 0 && Number(v.unitPrice) >= 0 && v.unitPrice !== "" && <div className="mt-1">قيمة الشحنة على حساب المحطة: {(qty * Number(v.unitPrice)).toFixed(2)} — الاستلام لا يعني الدفع.</div>}
+          {qty > 0 && Number(v.unitPrice) >= 0 && v.unitPrice !== "" && <div className="mt-1">قيمة النقلة على حساب المحطة: {(qty * Number(v.unitPrice)).toFixed(2)} — الاستلام لا يعني الدفع.</div>}
         </div>
         <div className="flex gap-2">
-          <Button type="submit" loading={busy} disabled={!qty || extra < 0 || !v.stationId}>تسجيل الشحنة</Button>
+          <Button type="submit" loading={busy} disabled={!qty || extra < 0 || !v.stationId}>تسجيل النقلة</Button>
           <Button type="button" variant="ghost" onClick={() => setOpen(false)}>إلغاء</Button>
         </div>
       </form>

@@ -6,7 +6,7 @@ import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Stat
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { DateInput } from "@/components/date-input";
 
-export const metadata = { title: "الصندوق" };
+export const metadata = { title: "الغلّة" };
 
 const KIND: Record<string, { label: string; tone: "success" | "warning" | "neutral" }> = {
   PAYMENT: { label: "تحصيل", tone: "success" },
@@ -21,7 +21,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   const [box, cycles] = await Promise.all([cashBox(actor, filters), listCycles(actor)]);
   return (
     <div className="space-y-6">
-      <PageHeader title="الصندوق" />
+      <PageHeader title="الغلّة" />
       <form method="get" className="flex flex-wrap gap-2 rounded-xl border border-border bg-surface p-3">
         <Select name="cycleId" defaultValue={sp.cycleId ?? ""} className="w-48" aria-label="الدورة">
           <option value="">كل الدورات</option>
@@ -35,16 +35,16 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
       {(box.cycle || box.range.from || box.range.to) && (
         <p className="text-sm text-muted">
           {box.cycle ? `الدورة: ${box.cycle.name} — ` : ""}الفترة: {box.range.from ? formatDate(box.range.from) : "البداية"} إلى {box.range.to ? formatDate(box.range.to) : "الآن"}
-          {box.cycle && " (التحصيلات المرتبطة بالدورة، والمصروفات ودفعات المحطات خلال فترتها)"}
+          {box.cycle && " (المقبوض المرتبط بالدورة، والمصاريف ودفعات المحطات خلال فترتها)"}
         </p>
       )}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Link href="/d/collections"><Stat label="المقبوضات (تحصيلات)" value={formatMoney(box.receipts)} tone="success" /></Link>
-        <Link href="/d/expenses"><Stat label="المصروفات" value={formatMoney(box.expenses)} tone="warning" /></Link>
+        <Link href="/d/expenses"><Stat label="المصاريف" value={formatMoney(box.expenses)} tone="warning" /></Link>
         <Link href="/d/stations"><Stat label="دفعات المحطات" value={formatMoney(box.stationPayments)} /></Link>
         <Stat label="الرصيد المحسوب" value={formatMoney(box.balance)} tone={box.balance.isNeg() ? "danger" : "primary"} />
       </div>
-      <Alert tone="warning">الرصيد محسوب من السجلات المسجلة في النظام، ولا يثبت مقدار النقد الموجود فعلًا في الصندوق.</Alert>
+      <Alert tone="warning">الرصيد محسوب من السجلات المسجلة في النظام، ولا يثبت مقدار النقد الموجود فعلًا في الغلّة.</Alert>
       <Card title="الحركات">
         {box.entries.length === 0 ? (
           <EmptyState>لا توجد حركات.</EmptyState>

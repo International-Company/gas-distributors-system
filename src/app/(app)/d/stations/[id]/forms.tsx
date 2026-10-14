@@ -62,7 +62,7 @@ export function StationPriceForm({ stationId, price }: { stationId: string; pric
       <form onSubmit={run.submit} className="space-y-3">
         {run.error && <Alert tone="danger">{run.error}</Alert>}
         {saved && <Alert tone="success">حُفظ السعر.</Alert>}
-        <Alert>يُقترح هذا السعر عند تسجيل شحنة جديدة. تغييره لا يغيّر قيمة الشحنات المسجلة سابقًا.</Alert>
+        <Alert>يُقترح هذا السعر عند تسجيل نقلة جديدة. تغييره لا يغيّر قيمة النقلات المسجلة سابقًا.</Alert>
         <Field label="السعر" htmlFor="sp-price" error={run.fields.defaultUnitPrice}><Input id="sp-price" dir="ltr" inputMode="decimal" value={v} onChange={(e) => { setSaved(false); setV(e.target.value); }} /></Field>
         <Button type="submit" variant="secondary" loading={run.busy}>حفظ</Button>
       </form>
