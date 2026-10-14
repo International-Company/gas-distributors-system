@@ -66,7 +66,7 @@ check("الهاتف: لا تمرير أفقي", (await mp.evaluate(() => documen
 
 const a = await b.newContext({ viewport: { width: 1280, height: 760 } });
 const ap = await login(a, U, P, false); await ap.goto(BASE + "/admin/audit"); await ap.waitForLoadState("networkidle");
-check("قائمة الإدارة: «إدارة الموزّعين» عنوان لا يكرر اسم القسم", (await ap.locator("aside").first().getByRole("button", { name: "إدارة الموزّعين" }).count()) === 1);
+check("قائمة الإدارة: مجموعة «الموزّعين» وأقسامها", (await ap.locator("aside").first().getByRole("button", { name: "الموزّعين", exact: true }).count()) === 1 && (await ap.locator("aside").first().getByRole("link", { name: "المجموعات" }).count()) === 1);
 await ap.locator("aside").first().screenshot({ path: `${OUT}/n-05-admin.png` });
 await b.close();
 console.log(`\nفشل: ${fails}`);

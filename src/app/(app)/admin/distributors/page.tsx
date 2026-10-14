@@ -8,7 +8,7 @@ import { Badge, Button, buttonClass, EmptyState, Input, PageHeader, Select } fro
 import { DistributorStatusBadge } from "@/components/distributor-status";
 import { formatDate } from "@/lib/format";
 
-export const metadata = { title: "الموزّعون" };
+export const metadata = { title: "الموزّعين" };
 
 type SP = Promise<Record<string, string | undefined>>;
 
@@ -22,7 +22,7 @@ export default async function DistributorsPage({ searchParams }: { searchParams:
   return (
     <div>
       <PageHeader
-        title="الموزّعون"
+        title="الموزّعين"
         actions={
           <>
             {hasPermission(actor, "distributors.export") && (
@@ -49,8 +49,8 @@ export default async function DistributorsPage({ searchParams }: { searchParams:
           <option value="ARCHIVED">مؤرشف</option>
           <option value="ALL">الكل</option>
         </Select>
-        <Select name="categoryId" defaultValue={sp.categoryId ?? ""} aria-label="التصنيف">
-          <option value="">كل التصنيفات</option>
+        <Select name="categoryId" defaultValue={sp.categoryId ?? ""} aria-label="المجموعة">
+          <option value="">كل المجموعات</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
@@ -87,7 +87,7 @@ export default async function DistributorsPage({ searchParams }: { searchParams:
                   <th className="px-4 py-3 font-medium">اسم المستخدم</th>
                   <th className="px-4 py-3 font-medium">الهاتف</th>
                   <th className="px-4 py-3 font-medium">المنطقة</th>
-                  <th className="px-4 py-3 font-medium">التصنيف</th>
+                  <th className="px-4 py-3 font-medium">المجموعة</th>
                   <th className="px-4 py-3 font-medium">الحالة</th>
                   <th className="px-4 py-3 font-medium">الانتهاء</th>
                 </tr>

@@ -9,14 +9,14 @@ export { NAV_GROUPS, type NavGroup, type NavIcon, type NavItem } from "./nav-gro
 type Def = NavItem & { permission?: AdminPermission; superAdmin?: boolean };
 
 const ADMIN_NAV: Def[] = [
-  { href: "/admin", label: "لوحة التحكم", icon: "home", group: "main" },
-  { href: "/admin/distributors", label: "الموزّعون", icon: "users", group: "people", permission: "distributors.view" },
-  { href: "/admin/categories", label: "التصنيفات", icon: "tags", group: "people", permission: "distributors.view" },
+  { href: "/admin", label: "الرئيسية", icon: "home", group: "main" },
+  { href: "/admin/distributors", label: "الموزّعين", icon: "users", group: "people", permission: "distributors.view" },
+  { href: "/admin/categories", label: "المجموعات", icon: "tags", group: "people", permission: "distributors.view" },
   { href: "/admin/reports", label: "التقارير", icon: "chart", group: "oversight", permission: "reports.view" },
-  { href: "/admin/audit", label: "سجل التدقيق", icon: "history", group: "oversight", permission: "audit.view" },
-  { href: "/admin/login-attempts", label: "محاولات الدخول", icon: "login", group: "oversight", permission: "audit.view" },
-  { href: "/admin/errors", label: "سجل الأخطاء", icon: "bug", group: "oversight", permission: "errors.view" },
-  { href: "/admin/admins", label: "مديرو النظام", icon: "shield", group: "system", superAdmin: true },
+  { href: "/admin/audit", label: "سجل الحركات", icon: "history", group: "oversight", permission: "audit.view" },
+  { href: "/admin/login-attempts", label: "مين دخل", icon: "login", group: "oversight", permission: "audit.view" },
+  { href: "/admin/errors", label: "الأعطال", icon: "bug", group: "oversight", permission: "errors.view" },
+  { href: "/admin/admins", label: "المدراء", icon: "shield", group: "system", superAdmin: true },
   { href: "/admin/settings", label: "الإعدادات", icon: "settings", group: "system", permission: "settings.manage" },
   { href: "/account", label: "حسابي", icon: "user", group: "account" },
 ];

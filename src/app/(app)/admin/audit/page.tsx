@@ -5,7 +5,7 @@ import { AUDIT_ACTION_LABELS, AuditTable } from "@/components/audit-table";
 import { Pagination } from "@/components/pagination";
 import { DateInput } from "@/components/date-input";
 
-export const metadata = { title: "سجل التدقيق" };
+export const metadata = { title: "سجل الحركات" };
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePageActor({ role: "ADMIN", permission: "audit.view" });
@@ -14,7 +14,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   const data = await listAuditLogs(actor, { ...params, page: sp.page });
   return (
     <div>
-      <PageHeader title="سجل التدقيق" />
+      <PageHeader title="سجل الحركات" />
       <form method="get" className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-border bg-surface p-3 md:grid-cols-5">
         <Select name="action" defaultValue={sp.action ?? ""} className="col-span-2 md:col-span-2" aria-label="نوع العملية">
           <option value="">كل العمليات</option>

@@ -115,7 +115,7 @@ async function assertUsernameFree(tx: Tx, username: string, exceptUserId?: strin
 
 async function assertCategory(tx: Tx, categoryId: string | null | undefined) {
   if (categoryId && !(await tx.distributorCategory.findUnique({ where: { id: categoryId } }))) {
-    throw new AppError("VALIDATION", "التصنيف غير موجود", { categoryId: "التصنيف غير موجود" });
+    throw new AppError("VALIDATION", "المجموعة غير موجودة", { categoryId: "المجموعة غير موجودة" });
   }
 }
 

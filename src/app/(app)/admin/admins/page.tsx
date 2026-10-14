@@ -6,14 +6,14 @@ import { Badge, Card, PageHeader } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 import { AdminEditor } from "./editor";
 
-export const metadata = { title: "مديرو النظام" };
+export const metadata = { title: "المدراء" };
 
 export default async function AdminsPage() {
   const actor = await requirePageActor({ role: "ADMIN", superAdmin: true });
   const rows = await listAdmins(actor);
   return (
     <div className="space-y-6">
-      <PageHeader title="مديرو النظام" actions={<AdminEditor permissions={ADMIN_PERMISSIONS} />} />
+      <PageHeader title="المدراء" actions={<AdminEditor permissions={ADMIN_PERMISSIONS} />} />
       <Card>
         <ul className="divide-y divide-border">
           {rows.map((a) => (

@@ -18,7 +18,7 @@ export async function exportDistributorsXlsx(actor: Actor, filters: unknown): Pr
     { header: "اسم المستخدم", key: "username", width: 18 },
     { header: "الهاتف", key: "phone", width: 16 },
     { header: "المنطقة", key: "region", width: 22 },
-    { header: "التصنيف", key: "category", width: 16 },
+    { header: "المجموعة", key: "category", width: 16 },
     { header: "الحالة", key: "status", width: 14 },
     { header: "نوع الحساب", key: "type", width: 12 },
     { header: "تاريخ الانتهاء", key: "expiresAt", width: 14 },

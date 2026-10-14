@@ -6,7 +6,7 @@ import { hasPermission } from "@/server/actor";
 import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
 import { formatDate, formatMoney } from "@/lib/format";
 
-export const metadata = { title: "لوحة التحكم" };
+export const metadata = { title: "الرئيسية" };
 
 export default async function AdminDashboard() {
   const actor = await requirePageActor({ role: "ADMIN" });
@@ -14,7 +14,7 @@ export default async function AdminDashboard() {
   const central = hasPermission(actor, "reports.view") ? await centralOverview(actor, {}) : null;
   return (
     <div className="space-y-6">
-      <PageHeader title="لوحة التحكم" />
+      <PageHeader title="الرئيسية" />
 
       {accounts && (
         <>
@@ -65,7 +65,7 @@ export default async function AdminDashboard() {
         </div>
       )}
 
-      {!accounts && !security && <EmptyState>لا توجد أقسام متاحة لصلاحياتك في لوحة التحكم.</EmptyState>}
+      {!accounts && !security && <EmptyState>لا توجد أقسام متاحة لصلاحياتك في الرئيسية.</EmptyState>}
 
       <p className="text-xs text-muted">
         التفاصيل لكل موزّع في «التقارير» حسب صلاحياتك.

@@ -70,9 +70,9 @@ export function DistributorForm({ categories, existing }: { categories: Category
           <Field label="المنطقة أو نطاق العمل" htmlFor="f-region" error={fields.region}>
             <Input id="f-region" value={v.region} onChange={set("region")} required />
           </Field>
-          <Field label="التصنيف" htmlFor="f-cat" error={fields.categoryId}>
+          <Field label="المجموعة" htmlFor="f-cat" error={fields.categoryId}>
             <Select id="f-cat" value={v.categoryId} onChange={set("categoryId")}>
-              <option value="">بلا تصنيف</option>
+              <option value="">بلا مجموعة</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}

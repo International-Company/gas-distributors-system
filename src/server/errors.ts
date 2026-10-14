@@ -36,5 +36,6 @@ export class AppError extends Error {
   }
 }
 
-export const notFound = (what = "العنصر") => new AppError("NOT_FOUND", `${what} غير موجود`);
+/** «غير موجود/موجودة» حسب الاسم: المنتهي بتاء مربوطة مؤنث (الجرة، الدورة، المحطة). */
+export const notFound = (what = "العنصر") => new AppError("NOT_FOUND", `${what} غير ${/ة$/.test(what) ? "موجودة" : "موجود"}`);
 export const forbidden = () => new AppError("FORBIDDEN", "لا تملك صلاحية تنفيذ هذه العملية");

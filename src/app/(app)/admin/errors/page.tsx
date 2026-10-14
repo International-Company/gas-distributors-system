@@ -4,7 +4,7 @@ import { Card, EmptyState, PageHeader } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
 import { formatDateTime } from "@/lib/format";
 
-export const metadata = { title: "سجل الأخطاء" };
+export const metadata = { title: "الأعطال" };
 
 export default async function ErrorsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePageActor({ role: "ADMIN", permission: "errors.view" });
@@ -12,7 +12,7 @@ export default async function ErrorsPage({ searchParams }: { searchParams: Promi
   const data = await listErrorLogs(actor, { page: sp.page });
   return (
     <div>
-      <PageHeader title="سجل الأخطاء التقنية" />
+      <PageHeader title="الأعطال" />
       <Card>
         {data.rows.length === 0 ? (
           <EmptyState>لا توجد أخطاء مسجلة.</EmptyState>

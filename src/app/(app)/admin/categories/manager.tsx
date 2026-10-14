@@ -32,7 +32,7 @@ export function CategoriesManager({ rows, canManage }: { rows: Row[]; canManage:
 
   const remove = async (r: Row) => {
     setRowError("");
-    if (!confirm(`حذف التصنيف «${r.name}»؟`)) return;
+    if (!confirm(`حذف المجموعة «${r.name}»؟`)) return;
     try {
       await api("DELETE", `/api/v1/admin/categories/${r.id}`);
       router.refresh();
@@ -45,13 +45,13 @@ export function CategoriesManager({ rows, canManage }: { rows: Row[]; canManage:
     <Card>
       {canManage && (
         <form onSubmit={create.submit} className="mb-4 flex gap-2">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم تصنيف جديد" required aria-label="اسم التصنيف" />
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم مجموعة جديدة" required aria-label="اسم المجموعة" />
           <Button type="submit" loading={create.busy}>إضافة</Button>
         </form>
       )}
       {(create.error || rename.error || rowError) && <Alert tone="danger" className="mb-3">{create.error || rename.error || rowError}</Alert>}
       {rows.length === 0 ? (
-        <EmptyState>لا توجد تصنيفات بعد.</EmptyState>
+        <EmptyState>لا توجد مجموعات بعد.</EmptyState>
       ) : (
         <ul className="divide-y divide-border">
           {rows.map((r) => (
@@ -72,7 +72,7 @@ export function CategoriesManager({ rows, canManage }: { rows: Row[]; canManage:
                       <Button size="sm" variant="ghost" onClick={() => setEditing({ id: r.id, name: r.name })} aria-label="تعديل">
                         <Pencil className="size-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => remove(r)} disabled={r.count > 0} title={r.count > 0 ? "لا يمكن حذف تصنيف مستخدم" : undefined} aria-label="حذف">
+                      <Button size="sm" variant="ghost" onClick={() => remove(r)} disabled={r.count > 0} title={r.count > 0 ? "لا يمكن حذف مجموعة مستخدمة" : undefined} aria-label="حذف">
                         <Trash2 className="size-4" />
                       </Button>
                     </span>

@@ -29,8 +29,8 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
       />
       <form method="get" className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3">
         {categories.length > 0 && (
-          <Select name="categoryId" defaultValue={sp.categoryId ?? ""} className="w-48" aria-label="التصنيف">
-            <option value="">كل التصنيفات</option>
+          <Select name="categoryId" defaultValue={sp.categoryId ?? ""} className="w-48" aria-label="المجموعة">
+            <option value="">كل المجموعات</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
         )}

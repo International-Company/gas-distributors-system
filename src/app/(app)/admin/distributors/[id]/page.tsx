@@ -39,7 +39,7 @@ export default async function DistributorPage({ params }: { params: Promise<{ id
           items={[
             ["اسم المستخدم", <span key="u" className="ltr-nums">{d.user?.username}</span>],
             ["الهاتف", <span key="p" className="ltr-nums">{d.phone}</span>],
-            ["التصنيف", d.category?.name ?? "—"],
+            ["المجموعة", d.category?.name ?? "—"],
             ["نوع الحساب", d.isTrial ? "تجريبي" : "فعلي"],
             ["تاريخ الانتهاء", d.expiresAt ? formatDate(d.expiresAt) : "بلا مدة محددة"],
             ["آخر تغيير للحالة", formatDateTime(d.statusChangedAt)],

@@ -6,7 +6,7 @@ export const ADMIN_PERMISSIONS = {
   "distributors.status": "تفعيل الحسابات وتعليقها وأرشفتها وتحديد صلاحيتها",
   "distributors.credentials": "إعادة تعيين كلمات المرور وإنهاء الجلسات",
   "distributors.export": "تصدير قائمة الحسابات",
-  "categories.manage": "إدارة تصنيفات الموزّعين",
+  "categories.manage": "إدارة مجموعات الموزّعين",
   "audit.view": "عرض سجل التدقيق ومحاولات الدخول",
   "reports.view": "عرض التقارير المركزية وتقارير الموزّعين وتصديرها",
   "errors.view": "عرض سجل الأخطاء التقنية",
