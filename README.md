@@ -2,7 +2,7 @@
 
 منصة ويب مركزية لإدارة موزّعي الغاز في قطاع غزة: حساب مستقل ومعزول لكل موزّع، وإدارة مركزية لمديري النظام.
 
-> **حالة المشروع:** المرحلة الأولى (أساس النظام والأمان) منفذة. المراحل التالية (الكشوف، المواطنون، الدورات، الجرار، المخزون، المالية، PWA، الإعلانات) لم تُنفذ بعد. التفاصيل في [docs/phase-1-report.md](docs/phase-1-report.md).
+> **حالة المشروع:** المرحلتان 1 (الأساس والأمان) و2 (الكشوف والمواطنون والدورات) منفذتان. المراحل التالية (الجرار، المخزون، المالية، التقارير، PWA، الإعلانات) لم تُنفذ بعد. التفاصيل في [docs/phase-1-report.md](docs/phase-1-report.md) و [docs/phase-2-report.md](docs/phase-2-report.md).
 
 ## التقنيات
 
@@ -117,4 +117,4 @@ npm run typecheck
 
 - [docs/architecture.md](docs/architecture.md): البنية، العزل، الأمان، القرارات التقنية
 - [docs/api.md](docs/api.md): واجهات API
-- [docs/phase-1-report.md](docs/phase-1-report.md): تقرير المرحلة الأولى ونتائج الاختبارات
+- [docs/phase-1-report.md](docs/phase-1-report.md) و [docs/phase-2-report.md](docs/phase-2-report.md): تقارير المراحل ونتائج الاختبارات

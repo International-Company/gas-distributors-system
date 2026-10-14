@@ -81,6 +81,8 @@ body {
 .ltr-nums {
   direction: ltr;
   unicode-bidi: isolate;
+  /* داخل خلية جدول عربي: يبقى المحاذاة لليمين كبقية الخلايا رغم الاتجاه اللاتيني للمحتوى */
+  text-align: right;
 }
 
 :focus-visible {

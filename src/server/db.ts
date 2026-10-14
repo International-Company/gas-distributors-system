@@ -31,12 +31,12 @@ export type Tx = Prisma.TransactionClient;
 const TX_OPTIONS = { maxWait: 10_000, timeout: 20_000 } as const;
 
 /** معاملة في سياق موزّع واحد: RLS يقصر الرؤية والكتابة على بياناته. */
-export function withTenant<T>(distributorId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
+export function withTenant<T>(distributorId: string, fn: (tx: Tx) => Promise<T>, opts: { timeout?: number } = {}): Promise<T> {
   if (!distributorId) throw new Error("withTenant: معرف الموزّع مطلوب");
   return appDb.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.distributor_id', ${distributorId}, true), set_config('app.bypass_rls', 'off', true)`;
     return fn(tx);
-  }, TX_OPTIONS);
+  }, { ...TX_OPTIONS, ...opts });
 }
 
 /** معاملة في السياق المركزي (المديرون والمصادقة والمهام النظامية). */

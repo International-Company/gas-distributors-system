@@ -37,6 +37,16 @@ export function formatDateTime(d: Date | string | null | undefined, fallback = "
   return toDate(d) ? isolate(plainDateTime(d)) : fallback;
 }
 
+/** مبلغ بمنزلتين عشريتين وفواصل آلاف، معزول الاتجاه. القيمة نص عشري أو Decimal (لا تحويل لعدد عائم). */
+export function formatMoney(v: { toString(): string } | string | number | null | undefined, symbol = "") {
+  if (v === null || v === undefined) return "—";
+  const [int, frac = ""] = String(v).split(".");
+  const neg = int.startsWith("-");
+  const digits = (neg ? int.slice(1) : int).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const s = `${neg ? "-" : ""}${digits}.${(frac + "00").slice(0, 2)}`;
+  return isolate(symbol ? `${s} ${symbol}` : s);
+}
+
 /** قيمة مناسبة لحقل <input type="date"> بتوقيت غزة. */
 export function toDateInput(d: Date | string | null | undefined) {
   const x = toDate(d);

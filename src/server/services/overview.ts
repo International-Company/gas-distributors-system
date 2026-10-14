@@ -1,6 +1,28 @@
-import { withSystem } from "../db";
-import { type Actor, assertAdmin, hasPermission } from "../actor";
+import { withSystem, withTenant } from "../db";
+import { type Actor, assertAdmin, assertDistributor, hasPermission } from "../actor";
 import { sweepExpired } from "./expiry";
+
+/** لوحة الموزّع: الدورة النشطة وحالة الكشوف. أعداد الجرار تُضاف مع المرحلة 3. */
+export async function distributorOverview(actor: Actor) {
+  assertDistributor(actor);
+  return withTenant(actor.distributorId, async (tx) => {
+    const cycle = await tx.cycle.findFirst({ where: { status: "OPEN" } });
+    const [agg, statements, openCases] = await Promise.all([
+      cycle ? tx.entitlement.aggregate({ where: { cycleId: cycle.id, status: "ACTIVE" }, _count: { _all: true }, _sum: { quantity: true } }) : null,
+      tx.statement.groupBy({ by: ["status"], _count: { _all: true } }),
+      tx.reviewCase.count({ where: { status: "OPEN" } }),
+    ]);
+    const st = (s: string) => statements.find((x) => x.status === s)?._count._all ?? 0;
+    return {
+      cycle,
+      citizens: agg?._count._all ?? 0,
+      cylinders: agg?._sum.quantity ?? 0,
+      pendingStatements: st("PENDING_REVIEW"),
+      approvedStatements: st("APPROVED"),
+      openCases,
+    };
+  });
+}
 
 /** ملخص لوحة مدير النظام في المرحلة الأولى: حالة الحسابات وأمان الدخول. */
 export async function adminOverview(actor: Actor) {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { Bug, Flame, History, Home, LogIn, LogOut, Menu, Settings, Shield, Tags, User, Users, X } from "lucide-react";
+import { Bug, CalendarDays, FileSpreadsheet, Flame, GitMerge, History, Home, LogIn, LogOut, Menu, Search, Settings, Shield, ShieldAlert, Tags, User, Users, X } from "lucide-react";
 import type { NavIcon, NavItem } from "@/lib/nav";
 import { cn } from "./ui";
 import { ThemeToggle } from "./theme";
@@ -11,6 +11,7 @@ import { ApiProvider } from "./api-client";
 
 const ICONS: Record<NavIcon, typeof Home> = {
   home: Home, users: Users, tags: Tags, shield: Shield, history: History, login: LogIn, bug: Bug, settings: Settings, user: User,
+  calendar: CalendarDays, file: FileSpreadsheet, search: Search, merge: GitMerge, alert: ShieldAlert,
 };
 
 type Props = { systemName: string; nav: NavItem[]; userName: string; roleLabel: string; children: ReactNode };

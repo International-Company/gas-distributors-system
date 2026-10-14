@@ -96,6 +96,13 @@ model Distributor {
 
   user User?
 
+  cycles        Cycle[]
+  statements    Statement[]
+  citizens      Citizen[]
+  entitlements  Entitlement[]
+  storedFiles   StoredFile[]
+  reviewCases   ReviewCase[]
+
   @@index([status])
   @@index([expiresAt])
   @@map("distributors")
@@ -206,4 +213,294 @@ model ErrorLog {
 
   @@index([at])
   @@map("error_logs")
+}
+
+// ============================================================
+// المرحلة 2: الدورات والكشوف والمواطنون والاستحقاقات
+// كل جدول يحمل distributorId وتحميه سياسة RLS (راجع ترحيل phase2).
+// ============================================================
+
+enum CycleStatus {
+  OPEN
+  CLOSED
+}
+
+enum CycleEventType {
+  OPENED
+  CLOSED
+  REOPENED
+  PRICE_CHANGED
+}
+
+model Cycle {
+  id            String      @id @default(uuid()) @db.Uuid
+  distributorId String      @db.Uuid
+  distributor   Distributor @relation(fields: [distributorId], references: [id])
+  number        Int // تسلسل الدورة لدى الموزّع
+  name          String
+  status        CycleStatus @default(OPEN)
+  // سعر الجرة في هذه الدورة وعملته وقت الإنشاء. لا يتغير بتغير إعدادات العملة.
+  unitPrice     Decimal     @db.Decimal(12, 2)
+  currencyCode  String
+  openedAt      DateTime    @default(now())
+  openedById    String      @db.Uuid
+  closedAt      DateTime?
+  closedById    String?     @db.Uuid
+  createdAt     DateTime    @default(now())
+
+  events       CycleEvent[]
+  statements   Statement[]
+  entitlements Entitlement[]
+
+  @@unique([distributorId, number])
+  @@map("cycles")
+}
+
+model CycleEvent {
+  id            BigInt         @id @default(autoincrement())
+  distributorId String         @db.Uuid
+  cycleId       String         @db.Uuid
+  cycle         Cycle          @relation(fields: [cycleId], references: [id])
+  type          CycleEventType
+  reason        String?
+  details       Json?
+  userId        String         @db.Uuid
+  at            DateTime       @default(now())
+
+  @@index([cycleId, at])
+  @@map("cycle_events")
+}
+
+enum FileKind {
+  STATEMENT
+}
+
+// بيانات الملف الوصفية. المحتوى في file_blobs (مخزن مؤقت داخل PostgreSQL حتى اعتماد التخزين السحابي).
+model StoredFile {
+  id            String      @id @default(uuid()) @db.Uuid
+  distributorId String      @db.Uuid
+  distributor   Distributor @relation(fields: [distributorId], references: [id])
+  kind          FileKind
+  originalName  String
+  mimeType      String
+  size          Int
+  sha256        String
+  storage       String      @default("db")
+  storageKey    String?
+  createdById   String      @db.Uuid
+  createdAt     DateTime    @default(now())
+
+  blob       FileBlob?
+  statements Statement[]
+
+  @@index([distributorId, sha256])
+  @@map("stored_files")
+}
+
+model FileBlob {
+  fileId        String     @id @db.Uuid
+  file          StoredFile @relation(fields: [fileId], references: [id])
+  distributorId String     @db.Uuid
+  data          Bytes
+
+  @@map("file_blobs")
+}
+
+enum StatementStatus {
+  PENDING_REVIEW
+  APPROVED
+  SUPERSEDED
+  DISCARDED
+}
+
+enum ParseMethod {
+  EXCEL
+  PDF_TEXT
+  PDF_OCR
+}
+
+model Statement {
+  id             String          @id @default(uuid()) @db.Uuid
+  distributorId  String          @db.Uuid
+  distributor    Distributor     @relation(fields: [distributorId], references: [id])
+  cycleId        String?         @db.Uuid
+  cycle          Cycle?          @relation(fields: [cycleId], references: [id])
+  title          String
+  status         StatementStatus @default(PENDING_REVIEW)
+  // الإصدار المعتمد السابق الذي يحل محله هذا الكشف عند التحديث.
+  supersedesId   String?         @db.Uuid
+  supersedes     Statement?      @relation("StatementVersions", fields: [supersedesId], references: [id])
+  supersededBy   Statement[]     @relation("StatementVersions")
+  version        Int             @default(1)
+  fileId         String          @db.Uuid
+  file           StoredFile      @relation(fields: [fileId], references: [id])
+  parseMethod    ParseMethod?
+  // جدول البيانات الخام المستخرج (صفوف × أعمدة) وربط الأعمدة بالحقول.
+  rawTable       Json?
+  headerRow      Int?
+  columnMapping  Json?
+  extraction     Json?
+  suggestedCycle String?
+  importedById   String          @db.Uuid
+  importedAt     DateTime        @default(now())
+  approvedById   String?         @db.Uuid
+  approvedAt     DateTime?
+  discardedById  String?         @db.Uuid
+  discardedAt    DateTime?
+  discardReason  String?
+
+  rows         StatementRow[]
+  entitlements Entitlement[]
+
+  @@index([distributorId, status])
+  @@map("statements")
+}
+
+enum RowSeverity {
+  OK
+  WARNING
+  ERROR
+}
+
+// صف مستخرج من الكشف أثناء المراجعة. لا يُستخدم في أي عملية قبل الاعتماد.
+model StatementRow {
+  id            String      @id @default(uuid()) @db.Uuid
+  distributorId String      @db.Uuid
+  statementId   String      @db.Uuid
+  statement     Statement   @relation(fields: [statementId], references: [id])
+  rowIndex      Int
+  nationalId    String?
+  fullName      String?
+  phone         String?
+  citizenNumber String?
+  quantity      Int?
+  amount        Decimal?    @db.Decimal(12, 2)
+  issues        Json        @default("[]")
+  severity      RowSeverity @default(OK)
+  excluded      Boolean     @default(false)
+  editedById    String?     @db.Uuid
+  editedAt      DateTime?
+
+  @@unique([statementId, rowIndex])
+  @@map("statement_rows")
+}
+
+model Citizen {
+  id             String      @id @default(uuid()) @db.Uuid
+  distributorId  String      @db.Uuid
+  distributor    Distributor @relation(fields: [distributorId], references: [id])
+  nationalId     String
+  fullName       String
+  // اسم موحّد للبحث والمطابقة (بلا تشكيل، همزات موحدة).
+  nameNormalized String
+  phone          String?
+  archivedAt     DateTime?
+  mergedIntoId   String?     @db.Uuid
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  entitlements Entitlement[]
+
+  @@unique([distributorId, nationalId])
+  @@map("citizens")
+}
+
+enum EntitlementStatus {
+  ACTIVE
+  REMOVED
+}
+
+enum AmountSource {
+  AUTHORITY
+  COMPUTED
+}
+
+// استحقاق مواطن في دورة. بيانات الهيئة الأصلية محفوظة كما وردت في الكشف المعتمد.
+model Entitlement {
+  id               String            @id @default(uuid()) @db.Uuid
+  distributorId    String            @db.Uuid
+  distributor      Distributor       @relation(fields: [distributorId], references: [id])
+  cycleId          String            @db.Uuid
+  cycle            Cycle             @relation(fields: [cycleId], references: [id])
+  citizenId        String            @db.Uuid
+  citizen          Citizen           @relation(fields: [citizenId], references: [id])
+  statementId      String            @db.Uuid
+  statement        Statement         @relation(fields: [statementId], references: [id])
+  // رقم المواطن في كشف الهيئة = معرّف الجرة التشغيلي داخل الدورة.
+  citizenNumber    String
+  nameInStatement  String
+  phoneInStatement String?
+  quantity         Int
+  amountDue        Decimal           @db.Decimal(12, 2)
+  amountSource     AmountSource
+  unitPrice        Decimal           @db.Decimal(12, 2)
+  currencyCode     String
+  status           EntitlementStatus @default(ACTIVE)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  changes EntitlementChange[]
+
+  @@index([distributorId, citizenNumber])
+  @@index([citizenId])
+  @@map("entitlements")
+}
+
+// سجل تغييرات الاستحقاق: تحديث الكشف أو تعديل الموزّع أو الدمج. للإضافة فقط.
+model EntitlementChange {
+  id            BigInt      @id @default(autoincrement())
+  distributorId String      @db.Uuid
+  entitlementId String      @db.Uuid
+  entitlement   Entitlement @relation(fields: [entitlementId], references: [id])
+  source        String
+  statementId   String?     @db.Uuid
+  before        Json?
+  after         Json?
+  reason        String?
+  userId        String      @db.Uuid
+  at            DateTime    @default(now())
+
+  @@index([entitlementId, at])
+  @@map("entitlement_changes")
+}
+
+model MergeDismissal {
+  id            String   @id @default(uuid()) @db.Uuid
+  distributorId String   @db.Uuid
+  citizenAId    String   @db.Uuid
+  citizenBId    String   @db.Uuid
+  userId        String   @db.Uuid
+  at            DateTime @default(now())
+
+  @@unique([citizenAId, citizenBId])
+  @@map("merge_dismissals")
+}
+
+enum ReviewCaseType {
+  NOT_IN_STATEMENT
+}
+
+enum ReviewCaseStatus {
+  OPEN
+  RESOLVED
+}
+
+model ReviewCase {
+  id            String           @id @default(uuid()) @db.Uuid
+  distributorId String           @db.Uuid
+  distributor   Distributor      @relation(fields: [distributorId], references: [id])
+  type          ReviewCaseType
+  status        ReviewCaseStatus @default(OPEN)
+  nationalId    String?
+  fullName      String?
+  phone         String?
+  details       String?
+  createdById   String           @db.Uuid
+  createdAt     DateTime         @default(now())
+  resolvedById  String?          @db.Uuid
+  resolvedAt    DateTime?
+  resolution    String?
+
+  @@index([distributorId, status])
+  @@map("review_cases")
 }

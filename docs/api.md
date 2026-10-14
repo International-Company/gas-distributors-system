@@ -77,3 +77,50 @@
 | الطريقة والمسار | الوصف |
 |---|---|
 | `GET /settings/public` | اسم النظام وبيانات التواصل والعملة (تستخدم أيضًا لفحص صحة الخدمة على Railway) |
+
+---
+
+# المرحلة 2: واجهات الموزّع (الدورات، الكشوف، المواطنون)
+
+كلها تتطلب جلسة موزّع، وتعمل داخل سياق الموزّع المعزول (RLS). أي معرّف لا يخص الموزّع يرجع `NOT_FOUND`.
+
+## الدورات
+
+| الطريقة والمسار | الجسم | الوصف |
+|---|---|---|
+| `GET /cycles` | — | الدورات مع عدد المستحقين والجرار والمطلوب |
+| `POST /cycles` | `{name?, unitPrice}` | دورة جديدة؛ تُرفض بوجود دورة نشطة |
+| `GET /cycles/:id` | — | ملخص الدورة وسجلها وكشوفها |
+| `POST /cycles/:id/actions` | `{action:"close", confirm:true}` | إغلاق؛ يُرفض بوجود كشف قيد المراجعة |
+| | `{action:"reopen", reason}` | إعادة فتح؛ يُرفض بوجود دورة نشطة أخرى |
+| | `{action:"price", unitPrice, reason}` | تعديل السعر للدورة النشطة؛ لا يغيّر المبالغ المعتمدة |
+
+## الكشوف
+
+| الطريقة والمسار | الجسم | الوصف |
+|---|---|---|
+| `GET /statements` | `?status=&cycleId=` | القائمة مع أعداد الصفوف السليمة والتنبيهات والأخطاء |
+| `POST /statements` | multipart: `file`, `title?`, `supersedesId?` | رفع واستخراج؛ يرجع `{id, duplicateOf[], needsOcr}` |
+| `GET /statements/:id` | `?severity=OK\|WARNING\|ERROR\|EXCLUDED&q=&page=` | التفاصيل والصفوف والفروق مع الإصدار السابق |
+| `PATCH /statements/:id` | `{title?, cycleId?, supersedesId?}` | قيد المراجعة فقط |
+| `PUT /statements/:id/mapping` | `{headerRow, mapping:{nationalId, fullName, citizenNumber, quantity, amount, phone}}` | يعيد استخراج الصفوف |
+| `PATCH /statements/:id/rows/:rowId` | `{nationalId?, fullName?, phone?, citizenNumber?, quantity?, amount?, excluded?}` | تصحيح أو استبعاد صف |
+| `POST /statements/:id/ocr` | `{items:[{text,x,y,w,h,page}], confidence}` | نتيجة القراءة الضوئية من المتصفح |
+| `POST /statements/:id/approve` | `{confirm:true}` | الاعتماد الصريح |
+| `POST /statements/:id/discard` | `{reason}` | إلغاء قبل الاعتماد (يبقى محفوظًا) |
+| `GET /statements/:id/file` | — | الملف الأصلي، لصاحبه فقط |
+
+## المواطنون والاستحقاقات
+
+| الطريقة والمسار | الجسم | الوصف |
+|---|---|---|
+| `GET /citizens/search` | `?q=&by=auto\|name\|nationalId\|phone\|citizenNumber&includeArchived=1` | البحث |
+| `GET /citizens/:id` | — | الملف: الاستحقاقات حسب الدورة، الإجمالي، السجل الزمني |
+| `POST /citizens/:id/archive` | `{archived}` | أرشفة أو استعادة |
+| `GET/POST /citizens/archive-ended` | — | عدد القابلين للأرشفة / أرشفتهم دفعة واحدة |
+| `GET /citizens/merge-suggestions` | — | اقتراحات الدمج |
+| `POST /citizens/merge-suggestions` | `{citizenAId, citizenBId}` | رفض اقتراح |
+| `POST /citizens/merge` | `{primaryId, secondaryId, reason}` | دمج بقرار بشري |
+| `PATCH /entitlements/:id` | `{citizenNumber?, quantity?, amountDue?, nameInStatement?, reason}` | تعديل استحقاق معتمد في الدورة النشطة |
+| `GET/POST /review-cases` | `{nationalId?, fullName?, phone?, details}` | حالات المراجعة |
+| `POST /review-cases/:id/resolve` | `{resolution}` | إغلاق الحالة |

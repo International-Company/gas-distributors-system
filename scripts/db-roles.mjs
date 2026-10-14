@@ -11,7 +11,9 @@ if (!appPassword || appPassword.length < 12) {
 }
 
 // جداول للإضافة فقط: لا تعديل ولا حذف من التطبيق.
-const APPEND_ONLY = ["audit_logs", "login_attempts", "error_logs"];
+const APPEND_ONLY = ["audit_logs", "login_attempts", "error_logs", "cycle_events", "entitlement_changes", "file_blobs"];
+// لا حذف للبيانات من التطبيق إطلاقًا (الأرشفة بدل الحذف)، باستثناء هذه الجداول.
+const DELETE_ALLOWED = ["distributor_categories", "statement_rows"];
 
 const db = new PrismaClient({ datasourceUrl: ownerUrl });
 const quoteLiteral = (s) => `'${String(s).replace(/'/g, "''")}'`;
@@ -30,7 +32,8 @@ try {
     `GRANT USAGE ON SCHEMA public TO gas_app`,
     `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO gas_app`,
     `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO gas_app`,
-    `REVOKE TRUNCATE ON ALL TABLES IN SCHEMA public FROM gas_app`,
+    `REVOKE TRUNCATE, DELETE ON ALL TABLES IN SCHEMA public FROM gas_app`,
+    ...DELETE_ALLOWED.map((t) => `GRANT DELETE ON TABLE "${t}" TO gas_app`),
     `REVOKE ALL ON TABLE "_prisma_migrations" FROM gas_app`,
     ...APPEND_ONLY.map((t) => `REVOKE UPDATE, DELETE ON TABLE "${t}" FROM gas_app`),
     // الإعدادات: صف واحد يُحدّث فقط.
