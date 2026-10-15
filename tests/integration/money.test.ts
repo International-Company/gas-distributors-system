@@ -58,15 +58,6 @@ describe("صفحة «الفلوس»", () => {
     expect(m.cashInHand).toBe("5.00");
   });
 
-  it("الرسم: 14 يومًا تنتهي اليوم، بمقبوض كل يوم", async () => {
-    const { actor, ents } = await setup();
-    await recordPayment(actor, { clientOpId: key(), entitlementId: ents[0].id, amount: "12.5" });
-    const m = await moneyOverview(actor, {});
-    expect(m.chart).toHaveLength(14);
-    expect(m.chart[13]).toEqual({ date: m.period.today, collected: "12.50" });
-    expect(m.chart.slice(0, 13).every((d) => d.collected === "0.00")).toBe(true);
-  });
-
   it("عزل الموزّعين", async () => {
     const a = await setup();
     await recordPayment(a.actor, { clientOpId: key(), entitlementId: a.ents[0].id, amount: "20" });

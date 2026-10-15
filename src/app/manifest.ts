@@ -15,7 +15,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     scope: "/",
     display: "standalone",
     orientation: "any",
-    background_color: "#ffffff",
+    // شاشة النظام عند فتح التطبيق: خلفية الهوية الزرقاء نفسها التي تكملها شاشة البداية داخل التطبيق.
+    background_color: "#1e5aa8",
     theme_color: "#1e5aa8",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

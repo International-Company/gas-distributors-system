@@ -75,9 +75,8 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
         <Tile label="الصافي" value={formatMoney(m.inPeriod.net)} hint={PERIOD_LABELS[period]} tone={Number(m.inPeriod.net) < 0 ? "text-danger" : "text-text"} />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        {/* على الناس */}
-        <Card>
+      {/* على الناس */}
+      <Card>
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 text-sm text-muted"><Users className="size-4" /> باقي على الناس</div>
@@ -95,13 +94,7 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
               <div className="h-full rounded-full bg-success" style={{ width: `${Math.min(100, duePct)}%` }} />
             </div>
           </div>
-        </Card>
-
-        {/* المقبوض يوميًا */}
-        <Card>
-          <DailyChart data={m.chart} today={m.period.today} />
-        </Card>
-      </div>
+      </Card>
 
       {/* الحركات */}
       <section>
@@ -133,45 +126,6 @@ function Tile({ icon, label, value, hint, tone }: { icon?: React.ReactNode; labe
       <div className="flex items-center gap-1.5 text-xs text-muted sm:text-sm">{icon}{label}</div>
       <div className={cn("mt-1 text-lg font-bold tabular-nums sm:text-2xl", tone)}>{value}</div>
       <div className="mt-0.5 truncate text-[11px] text-muted sm:text-xs">{hint}</div>
-    </div>
-  );
-}
-
-/** أعمدة المقبوض لآخر 14 يومًا: سلسلة واحدة بلون واحد، وقيمة كل يوم عند المرور أو التركيز. */
-function DailyChart({ data, today }: { data: { date: string; collected: string }[]; today: string }) {
-  const max = Math.max(...data.map((d) => Number(d.collected)), 0);
-  const total = data.reduce((a, d) => a + Number(d.collected), 0);
-  return (
-    <div>
-      <div className="flex items-baseline justify-between">
-        <h3 className="text-sm text-muted">المقبوض آخر 14 يوم</h3>
-        <span className="text-sm font-semibold tabular-nums">{formatMoney(total.toFixed(2))}</span>
-      </div>
-      <div className="relative mt-4 flex h-32 items-end gap-0.5" role="img" aria-label={`المقبوض يوميًا لآخر 14 يوم، المجموع ${total.toFixed(2)}`}>
-        <div className="pointer-events-none absolute inset-x-0 top-0 border-t border-dashed border-border" aria-hidden />
-        {data.map((d) => {
-          const v = Number(d.collected);
-          const h = max > 0 ? Math.max((v / max) * 100, v > 0 ? 3 : 0) : 0;
-          return (
-            <div key={d.date} tabIndex={0} className="group relative flex h-full flex-1 items-end outline-none" aria-label={`${d.date === today ? "اليوم" : `${weekday(d.date)} ${dm(d.date)}`}: ${d.collected}`}>
-              {v > 0 ? (
-                <div className={cn("w-full rounded-t-[4px] bg-primary transition-opacity group-hover:opacity-80 group-focus:opacity-80", d.date !== today && "opacity-75")} style={{ height: `${h}%` }} />
-              ) : (
-                <div className="h-0.5 w-full rounded-full bg-border" />
-              )}
-              <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-text px-2 py-1 text-xs text-bg shadow group-hover:block group-focus:block">
-                {d.date === today ? "اليوم" : `${weekday(d.date)} ${dm(d.date)}`} · <bdi dir="ltr">{d.collected}</bdi>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="mt-1.5 flex gap-0.5 text-[10px] text-muted" aria-hidden>
-        {data.map((d, i) => (
-          <span key={d.date} className="flex-1 text-center tabular-nums">{d.date === today ? "اليوم" : i % 2 === 0 ? dm(d.date) : ""}</span>
-        ))}
-      </div>
-      <p className="mt-1 text-xs text-muted">أعلى يوم: <bdi dir="ltr">{max.toFixed(2)}</bdi></p>
     </div>
   );
 }

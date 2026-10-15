@@ -115,19 +115,6 @@ export async function moneyOverview(actor: Actor, input: unknown) {
       days.set(d, day);
     }
 
-    // المقبوض يوميًا لآخر 14 يومًا تنتهي بنهاية الفترة (أو اليوم).
-    const chartEnd = to ?? today;
-    const chartStart = addDays(chartEnd, -13);
-    const series = await tx.$queryRaw<{ d: Date; total: Prisma.Decimal }[]>`
-      SELECT ${localDate(Prisma.sql`"paidAt"`)} AS d, sum("amount") AS total FROM "payments"
-      WHERE "status" = 'ACTIVE' AND ${localDate(Prisma.sql`"paidAt"`)} BETWEEN ${chartStart}::date AND ${chartEnd}::date
-      GROUP BY 1`;
-    const byDay = new Map(series.map((s) => [s.d.toISOString().slice(0, 10), money(s.total).toFixed(2)]));
-    const chart = Array.from({ length: 14 }, (_, i) => {
-      const d = addDays(chartStart, i);
-      return { date: d, collected: byDay.get(d) ?? "0.00" };
-    });
-
     const inn = money(allTime.inn), out = money(allTime.out).add(money(allTime.sp));
     return {
       period: { key: v.period, from, to, today },
@@ -137,7 +124,6 @@ export async function moneyOverview(actor: Actor, input: unknown) {
       dues: {
         due: money(dues?.due).toFixed(2), paid: money(dues?.paid).toFixed(2), remaining: money(dues?.remaining).toFixed(2), owing: Number(dues?.owing ?? 0),
       },
-      chart,
       days: [...days.values()],
       truncated: items.length > 500,
     };
