@@ -22,7 +22,7 @@ type Method = "MANUAL_ENTRY" | "ID_SCAN";
 type Source = { kind: "server" } | { kind: "local"; fetchedAt: string; generatedAt: string; policy: Policy };
 type Notice = { tone: "success" | "warning"; text: string };
 
-const KIND_NAMES: Record<OpKind, string> = { receive: "استلام الفارغ", deliver: "التسليم", payment: "التحصيل" };
+const KIND_NAMES: Record<OpKind, string> = { receive: "استلام الفارغ", deliver: "التسليم", payment: "التحصيل", handover: "التسليم" };
 
 export function Counter() {
   const api = useApi();
@@ -46,7 +46,7 @@ export function Counter() {
     if (offlineOn && navigator.onLine) void refreshSnapshot?.();
   }, [offlineOn, refreshSnapshot]);
   const local = source.kind === "local" ? source : null;
-  const allowed = (k: OpKind) => !local || local.policy[k === "payment" ? "payments" : k];
+  const allowed = (k: OpKind) => !local || local.policy[k === "payment" ? "payments" : k === "handover" ? "deliver" : k];
   const currentOps = async () => (offlineOn ? await listOps(off!.userId).catch(() => [] as QueuedOp[]) : []);
   /** يعيد عرض البيانات الأساسية مع العمليات غير المتزامنة (دون جلبها من جديد). */
   const redraw = async () => {

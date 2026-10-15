@@ -50,6 +50,12 @@ export default async function StatementPage({ params, searchParams }: { params: 
         }
       />
       {(pending || st.status === "APPROVED") && <Steps steps={STATEMENT_STEPS} current={pending ? 1 : 3} />}
+      {st.status === "APPROVED" && (
+        <Alert tone="success" className="flex flex-wrap items-center justify-between gap-2">
+          <span>الكشف معتمد. افتحه لتسليم الناس والقبض منهم.</span>
+          <Link href={`/d/sheet?s=${st.id}`} className={buttonClass("primary", "sm")}>افتح الكشف</Link>
+        </Alert>
+      )}
 
       <Card title="الملف">
         <DetailList

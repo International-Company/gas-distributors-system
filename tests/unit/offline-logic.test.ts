@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  applyOverlay, applySyncedToSnapshot, checkDeliver, checkPayment, checkReceive, classifyFailure, fromCents,
-  lookupFromSnapshot, nextCylinder, toCents, type Found, type QueuedOp, type Snapshot,
+  applyOverlay, applySheetOverlay, applySyncedToSnapshot, checkDeliver, checkPayment, checkReceive, classifyFailure, compareNumbers, fromCents,
+  lookupFromSnapshot, nextCylinder, sheetFromSnapshot, toCents, type Found, type QueuedOp, type Snapshot,
 } from "@/lib/offline/logic";
 
 const snap = (): Snapshot => ({
@@ -10,6 +10,7 @@ const snap = (): Snapshot => ({
   distributorId: "d1",
   currencySymbol: "₪",
   policy: { receive: true, deliver: true, payments: true, maxAgeHours: 24 },
+  statements: [{ id: "s1", title: "كشف" }],
   citizens: [
     {
       citizenId: "c1",
@@ -19,12 +20,12 @@ const snap = (): Snapshot => ({
         {
           id: "e1", cycle: { id: "y2", name: "الدورة 2", status: "OPEN" }, status: "ACTIVE", citizenNumber: "295-7", quantity: 2,
           amountDue: "50.00", paid: "10.00", billable: true,
-          cylinders: [{ id: "k1", label: "295-7-1", status: "FILLED", seq: 1 }],
+          cylinders: [{ id: "k1", label: "295-7-1", status: "FILLED", seq: 1 }], statementId: "s1", handedOver: false,
         },
         {
           id: "e0", cycle: { id: "y1", name: "الدورة 1", status: "CLOSED" }, status: "ACTIVE", citizenNumber: "40", quantity: 1,
           amountDue: "25.00", paid: "25.00", billable: true,
-          cylinders: [{ id: "k0", label: "40", status: "EMPTY", seq: 1 }],
+          cylinders: [{ id: "k0", label: "40", status: "EMPTY", seq: 1 }], statementId: "s0", handedOver: false,
         },
       ],
     },
@@ -133,5 +134,44 @@ describe("المزامنة", () => {
     expect(toCents("0.07")).toBe(7);
     expect(fromCents(1250)).toBe("12.50");
     expect(fromCents(-5)).toBe("-0.05");
+  });
+});
+
+describe("صفحة «الكشف»", () => {
+  const sheetSnap = (): Snapshot => {
+    const s = snap();
+    s.citizens.push({
+      citizenId: "c2", nationalId: "000000018", fullName: "مواطن ثان",
+      entitlements: [{ id: "e2", cycle: { id: "y2", name: "الدورة 2", status: "OPEN" }, status: "ACTIVE", citizenNumber: "295-10", quantity: 1, amountDue: "25.00", paid: "0.00", billable: true, cylinders: [], statementId: "s1", handedOver: true }],
+    });
+    s.citizens.push({
+      citizenId: "c3", nationalId: "000000026", fullName: "مواطن ثالث",
+      entitlements: [{ id: "e3", cycle: { id: "y2", name: "الدورة 2", status: "OPEN" }, status: "ACTIVE", citizenNumber: "295-2", quantity: 1, amountDue: "25.00", paid: "0.00", billable: true, cylinders: [], statementId: "s1", handedOver: false }],
+    });
+    return s;
+  };
+
+  it("صفوف الكشف المختار فقط، بترتيب عددي للميزان-المتسلسل", () => {
+    const rows = sheetFromSnapshot(sheetSnap(), "s1");
+    expect(rows.map((r) => r.citizenNumber)).toEqual(["295-2", "295-7", "295-10"]);
+    expect(rows.find((r) => r.id === "e2")!.delivered).toBe(true);
+    expect(rows.find((r) => r.id === "e1")!.legacy).toEqual({ total: 1, delivered: 0 });
+    expect(rows.every((r) => r.phone === null)).toBe(true);
+    expect(sheetFromSnapshot(sheetSnap(), "s0").map((r) => r.id)).toEqual(["e0"]);
+  });
+
+  it("التسليم والدفع المعلقان يظهران ولا يتكرران", () => {
+    const meta = { nationalId: "000000026", name: "مواطن ثالث", cycleName: "الدورة 2", entitlementId: "e3" };
+    const rows = applySheetOverlay(sheetFromSnapshot(sheetSnap(), "s1"), [
+      op({ kind: "handover", meta }),
+      op({ id: "op2", kind: "payment", meta: { ...meta, amount: "10" } }),
+      op({ id: "op3", kind: "payment", status: "synced", meta: { ...meta, amount: "99" } }),
+    ]);
+    const r = rows.find((x) => x.id === "e3")!;
+    expect(r).toMatchObject({ delivered: true, paid: "10.00", remaining: "15.00", pending: { delivery: true, paid: "10.00" } });
+  });
+
+  it("ترتيب الأرقام", () => {
+    expect(["10", "2", "295-10", "295-2", "ب"].sort(compareNumbers)).toEqual(["2", "10", "295-2", "295-10", "ب"]);
   });
 });

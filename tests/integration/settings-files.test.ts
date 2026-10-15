@@ -42,16 +42,14 @@ describe("القائمة الجانبية", () => {
   it("تغيير الاسم والترتيب والإخفاء، ومنع إخفاء الأقسام الأساسية", async () => {
     const { actor: admin } = await makeAdmin({ superAdmin: true });
     const { actor: dist } = await makeDistributor();
-    await expect(updateNavOverrides(admin, { "/d": { hidden: true } })).rejects.toMatchObject({ code: "VALIDATION" });
     await expect(updateNavOverrides(admin, { "/unknown": { label: "x x" } })).rejects.toMatchObject({ code: "VALIDATION" });
-    await updateNavOverrides(admin, { "/d/stations": { label: "محطات التعبية", order: 0 }, "/d/merge": { hidden: true } });
+    await expect(updateNavOverrides(admin, { "/d/sheet": { hidden: true } })).rejects.toMatchObject({ code: "VALIDATION" });
+    await updateNavOverrides(admin, { "/d/finance": { label: "فلوسي", order: 0 }, "/d/statements": { hidden: true } });
     const s = await getPublicSettings();
     const nav = navFor(dist, s.navOverrides);
-    // الترتيب داخل المجموعة: المحطات صارت أول «الجرار والمخزن»، والمجموعات بترتيبها الثابت.
-    expect(nav.filter((n) => n.group === "stock").map((n) => n.href)).toEqual(["/d/stations", "/d/cylinders", "/d/shipments"]);
-    expect(nav[0].href).toBe("/d");
-    expect(nav.find((n) => n.href === "/d/stations")?.label).toBe("محطات التعبية");
-    expect(nav.some((n) => n.href === "/d/merge")).toBe(false);
+    // الترتيب المحدد صراحة يتقدم، والإخفاء يحذف القسم من القائمة.
+    expect(nav.filter((n) => n.group === "main").map((n) => n.href)).toEqual(["/d/finance", "/d/sheet"]);
+    expect(nav[0].label).toBe("فلوسي");
     // الإخفاء تنظيمي فقط: الصفحة نفسها محمية بالصلاحيات لا بالقائمة.
     const { actor: limited } = await makeAdmin({ permissions: ["settings.manage"] });
     await expect(updateNavOverrides(limited, {})).resolves.toBeUndefined();

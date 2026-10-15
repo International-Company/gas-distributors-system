@@ -110,7 +110,7 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
 
       <Card title="المقبوض">
         {p.entitlements.every((e) => e.payments.length === 0) ? (
-          <EmptyState>ما دفع شي بعد. القبض يتم من «التوزيع».</EmptyState>
+          <EmptyState>ما دفع شي بعد. القبض من «الكشف» بزر «دفع».</EmptyState>
         ) : (
           <ul className="divide-y divide-border text-sm">
             {p.entitlements.flatMap((e) => e.payments.map((pay) => ({ pay, cycle: e.cycle.name }))).sort((a, b) => b.pay.paidAt.getTime() - a.pay.paidAt.getTime()).map(({ pay, cycle }) => (

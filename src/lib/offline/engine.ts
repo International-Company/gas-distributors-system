@@ -11,6 +11,7 @@ export const ENDPOINTS: Record<OpKind, string> = {
   receive: "/api/v1/operations/receive-empty",
   deliver: "/api/v1/operations/deliver",
   payment: "/api/v1/payments",
+  handover: "/api/v1/handovers",
 };
 /** العمليات المؤكدة تبقى في القائمة للاطلاع ثم تُحذف. */
 const KEEP_SYNCED_MS = 3 * 24 * 3_600_000;

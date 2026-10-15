@@ -38,7 +38,7 @@ export function NewExpense() {
       <form onSubmit={submit} className="grid gap-3 sm:grid-cols-4">
         {error && <Alert tone="danger" className="sm:col-span-4">{error}</Alert>}
         <Field label="المبلغ" htmlFor="ex-amount" error={fields.amount}><Input id="ex-amount" dir="ltr" inputMode="decimal" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} required /></Field>
-        <Field label="الوصف" htmlFor="ex-desc" error={fields.description} className="sm:col-span-2"><Input id="ex-desc" value={v.description} onChange={(e) => setV({ ...v, description: e.target.value })} required /></Field>
+        <Field label="الوصف" htmlFor="ex-desc" error={fields.description} className="sm:col-span-2"><Input id="ex-desc" value={v.description} onChange={(e) => setV({ ...v, description: e.target.value })} placeholder="مثل: دفعة للمحطة، أجرة نقل، عمال" required /></Field>
         <Field label="التاريخ" htmlFor="ex-at" hint="الآن إن تُرك فارغًا" error={fields.spentAt}><DateInput id="ex-at" withTime value={v.spentAt} onChange={(x) => setV({ ...v, spentAt: x })} placeholder="الآن" /></Field>
         <div className="sm:col-span-4"><Button type="submit" loading={busy}>تسجيل</Button></div>
       </form>

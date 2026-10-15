@@ -74,7 +74,7 @@ export async function paidByEntitlement(tx: Tx, entitlementIds: string[]) {
  * (الخدمة قُدّمت فعلًا).
  */
 export const billableWhere: Prisma.EntitlementWhereInput = {
-  OR: [{ status: "ACTIVE" }, { cylinders: { some: { status: { not: "VOID" } } } }],
+  OR: [{ status: "ACTIVE" }, { cylinders: { some: { status: { not: "VOID" } } } }, { handovers: { some: { status: "ACTIVE" } } }],
 };
 
 function log(tx: Tx, actor: DistributorActor, action: string, entityType: string, entityId: string, after?: unknown, before?: unknown, reason?: string) {

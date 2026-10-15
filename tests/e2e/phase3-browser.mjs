@@ -69,7 +69,7 @@ await page.fill("#cp-current", "Start-1234");
 await page.fill("#cp-new", "Mine-5678");
 await page.fill("#cp-confirm", "Mine-5678");
 await page.click("button[type=submit]");
-await page.waitForURL("**/d");
+await page.waitForURL(/\/d(\/sheet)?$/);
 await page.goto(BASE + "/d/cycles");
 await page.fill("#c-price", "20");
 await page.click("text=بدء الدورة");

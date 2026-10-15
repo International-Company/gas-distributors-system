@@ -37,15 +37,19 @@ export type Snapshot = {
   distributorId: string;
   currencySymbol: string;
   policy: Policy;
+  statements: { id: string; title: string }[];
   citizens: {
     citizenId: string;
     nationalId: string;
     fullName: string;
-    entitlements: { id: string; cycle: Ent["cycle"]; status: string; citizenNumber: string; quantity: number; amountDue: string; paid: string; billable: boolean; cylinders: Cyl[] }[];
+    entitlements: {
+      id: string; cycle: Ent["cycle"]; status: string; citizenNumber: string; quantity: number; amountDue: string; paid: string; billable: boolean; cylinders: Cyl[];
+      statementId: string; handedOver: boolean;
+    }[];
   }[];
 };
 
-export type OpKind = "receive" | "deliver" | "payment";
+export type OpKind = "receive" | "deliver" | "payment" | "handover";
 /**
  * local: محفوظة على الجهاز ولم تُرسل بعد. pending: أُرسلت ولم يصل تأكيد الخادم (تُعاد بأمان بمعرّفها).
  * synced: أكدها الخادم. review: رفضها الخادم وتحتاج مراجعة (لا تُحسم تلقائيًا).
@@ -216,9 +220,88 @@ export function applySyncedToSnapshot(snap: Snapshot, op: QueuedOp): Snapshot {
           return { ...e, billable: true, cylinders: [...e.cylinders, { id: r.cylinder.id, label: r.cylinder.label, status: r.cylinder.status, seq: nextSeq(e.cylinders) }] };
         }
         if (op.kind === "deliver") return { ...e, cylinders: e.cylinders.map((x) => (x.id === op.meta.cylinderId ? { ...x, status: "DELIVERED" as const } : x)) };
+        if (op.kind === "handover") return { ...e, handedOver: true };
         if (op.kind === "payment" && r.paid) return { ...e, paid: r.paid };
         return e;
       }),
     })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// صفحة «الكشف»: الصفوف من الخادم أو من بيانات الجهاز، مع العمليات غير المتزامنة
+// ---------------------------------------------------------------------------
+
+export type SheetRow = {
+  id: string;
+  citizenId: string;
+  citizenNumber: string;
+  name: string;
+  nationalId: string;
+  phone: string | null;
+  quantity: number;
+  amountDue: string;
+  paid: string;
+  remaining: string;
+  delivered: boolean;
+  handoverId: string | null;
+  deliveredAt: string | null;
+  legacy: { total: number; delivered: number } | null;
+  /** تسليم أو دفع محفوظ على الجهاز ولم يصل الخادم بعد. */
+  pending?: { delivery: boolean; paid: string };
+};
+
+const numberKey = (n: string) => (/^[0-9]+(-[0-9]+)*$/.test(n) ? n.split("-").map(Number) : null);
+export function compareNumbers(a: string, b: string) {
+  const x = numberKey(a), y = numberKey(b);
+  if (x && y) {
+    for (let i = 0; i < Math.max(x.length, y.length); i++) {
+      const d = (x[i] ?? -1) - (y[i] ?? -1);
+      if (d) return d;
+    }
+    return 0;
+  }
+  if (x) return -1;
+  if (y) return 1;
+  return a.localeCompare(b);
+}
+
+/** صفوف كشف من لقطة الجهاز (دون أرقام الهواتف، فهي لا تُخزن على الجهاز). */
+export function sheetFromSnapshot(snap: Snapshot, statementId: string): SheetRow[] {
+  const rows: SheetRow[] = [];
+  for (const c of snap.citizens) {
+    for (const e of c.entitlements) {
+      if (e.statementId !== statementId || e.status !== "ACTIVE") continue;
+      const live = e.cylinders.filter((y) => y.status !== "VOID");
+      const deliveredCyl = live.filter((y) => y.status === "DELIVERED").length;
+      rows.push({
+        id: e.id, citizenId: c.citizenId, citizenNumber: e.citizenNumber, name: c.fullName, nationalId: c.nationalId, phone: null, quantity: e.quantity,
+        amountDue: e.amountDue, paid: e.paid, remaining: fromCents(Math.max(0, toCents(e.amountDue) - toCents(e.paid))),
+        delivered: e.handedOver || (live.length > 0 && deliveredCyl >= e.quantity),
+        handoverId: null, deliveredAt: null,
+        legacy: live.length ? { total: live.length, delivered: deliveredCyl } : null,
+      });
+    }
+  }
+  return rows.sort((a, b) => compareNumbers(a.citizenNumber, b.citizenNumber));
+}
+
+/** يطبق التسليم والدفع غير المتزامنين على الصفوف، فلا يكرر الجهاز عملية تنتظر الإرسال. */
+export function applySheetOverlay(rows: SheetRow[], ops: QueuedOp[]): SheetRow[] {
+  const pending = ops.filter(isUnsynced);
+  if (!pending.length) return rows;
+  return rows.map((r) => {
+    const mine = pending.filter((o) => o.meta.entitlementId === r.id);
+    if (!mine.length) return r;
+    const delivery = mine.some((o) => o.kind === "handover");
+    const extra = mine.filter((o) => o.kind === "payment").reduce((a, o) => a + toCents(o.meta.amount ?? "0"), 0);
+    const paid = toCents(r.paid) + extra;
+    return {
+      ...r,
+      delivered: r.delivered || delivery,
+      paid: fromCents(paid),
+      remaining: fromCents(Math.max(0, toCents(r.amountDue) - paid)),
+      pending: { delivery, paid: fromCents(extra) },
+    };
+  });
 }

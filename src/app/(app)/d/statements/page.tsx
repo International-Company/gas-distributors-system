@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requirePageActor } from "@/server/http/context";
 import { listStatements } from "@/server/services/statements";
+import { listCycles } from "@/server/services/cycles";
+import { getPublicSettings } from "@/server/services/settings";
 import { Card, EmptyState, PageHeader, buttonClass, cn } from "@/components/ui";
 import { STATEMENT_STATUS, StatementStatusBadge } from "@/components/statement-status";
 import { formatDateTime } from "@/lib/format";
@@ -13,13 +15,17 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
   const sp = await searchParams;
   const status = sp.status && sp.status in STATEMENT_STATUS ? sp.status : undefined;
-  const [list, approved] = await Promise.all([listStatements(actor, { status }), listStatements(actor, { status: "APPROVED" })]);
+  const [list, approved, cycles, settings] = await Promise.all([listStatements(actor, { status }), listStatements(actor, { status: "APPROVED" }), listCycles(actor), getPublicSettings()]);
+  const open = cycles.find((c) => c.status === "OPEN");
   return (
     <div className="space-y-6">
       <PageHeader title="الكشوفات" />
       <Steps steps={STATEMENT_STEPS} current={0} />
       <Card title="ارفع كشف الهيئة (PDF أو Excel)">
-        <UploadForm approved={approved.map((s) => ({ id: s.id, title: s.title, version: s.version, cycleName: s.cycle?.name ?? "" }))} />
+        <UploadForm
+          approved={approved.map((s) => ({ id: s.id, title: s.title, version: s.version, cycleName: s.cycle?.name ?? "" }))}
+          activeCycle={open ? { name: open.name, unitPrice: open.unitPrice.toFixed(2), currencySymbol: settings.currencySymbol } : null}
+        />
       </Card>
       <div className="flex flex-wrap gap-2">
         {[["", "الكل"], ...Object.entries(STATEMENT_STATUS).map(([k, v]) => [k, v.label])].map(([k, label]) => (

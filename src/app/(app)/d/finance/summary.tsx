@@ -36,13 +36,13 @@ export async function SummarySection({ actor, sp }: { actor: Actor; sp: Record<s
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Link href="/d/finance?tab=collections"><Stat label="المقبوض" value={formatMoney(box.receipts)} tone="success" /></Link>
         <Link href="/d/finance?tab=expenses"><Stat label="المصاريف" value={formatMoney(box.expenses)} tone="warning" /></Link>
-        <Link href="/d/stations"><Stat label="دفعات المحطات" value={formatMoney(box.stationPayments)} /></Link>
+        {!box.stationPayments.isZero() && <Link href="/d/stations"><Stat label="دفعات المحطات" value={formatMoney(box.stationPayments)} /></Link>}
         <Stat label="الرصيد" value={formatMoney(box.balance)} tone={box.balance.isNeg() ? "danger" : "primary"} />
       </div>
       <Alert tone="warning">الرصيد محسوب من المسجّل في النظام، ولا يثبت كم في الغلّة فعلًا.</Alert>
       <Card title="الحركات">
         {box.entries.length === 0 ? (
-          <EmptyState>ما في حركات بعد. المقبوض يُسجّل من «التوزيع»، والمصاريف من تبويب «المصاريف».</EmptyState>
+          <EmptyState>ما في حركات بعد. القبض من «الكشف» بزر «دفع»، والمصاريف (ومنها دفعات المحطة) من تبويب «المصاريف».</EmptyState>
         ) : (
           <ul className="divide-y divide-border text-sm">
             {box.entries.map((e) => (

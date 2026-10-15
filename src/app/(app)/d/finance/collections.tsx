@@ -32,8 +32,8 @@ export async function CollectionsSection({ actor, sp }: { actor: Actor; sp: Reco
       <Card title={`المجموع: ${formatMoney(data.totalAmount)}`}>
         {data.rows.length === 0 ? (
           <EmptyState>
-            <span className="block">ما في مقبوض بعد. تسجيل القبض يتم من «التوزيع» عند البحث برقم الهوية.</span>
-            <Link href="/d/counter" className={buttonClass("secondary", "sm", "mt-3")}>اذهب إلى التوزيع</Link>
+            <span className="block">ما في مقبوض بعد. القبض يتم من «الكشف» بزر «دفع» بجانب اسم الشخص.</span>
+            <Link href="/d/sheet" className={buttonClass("secondary", "sm", "mt-3")}>افتح الكشف</Link>
           </EmptyState>
         ) : (
           <ul className="divide-y divide-border text-sm">

@@ -7,13 +7,18 @@ import { Alert, Button, Field, Input, Select } from "@/components/ui";
 import { ApiError } from "@/components/api-client";
 
 type Approved = { id: string; title: string; version: number; cycleName: string };
+type ActiveCycle = { name: string; unitPrice: string; currencySymbol: string } | null;
 
-/** رفع ملف الكشف (multipart). لا يستخدم useApi لأنه يرسل FormData لا JSON. */
-export function UploadForm({ approved }: { approved: Approved[] }) {
+/**
+ * رفع ملف الكشف (multipart). لا يستخدم useApi لأنه يرسل FormData لا JSON.
+ * الدورة تُدار تلقائيًا: إن لم توجد دورة نشطة يُطلب سعر الجرة وتُنشأ الدورة قبل الرفع.
+ */
+export function UploadForm({ approved, activeCycle }: { approved: Approved[]; activeCycle: ActiveCycle }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [supersedesId, setSupersedesId] = useState("");
+  const [price, setPrice] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,6 +33,11 @@ export function UploadForm({ approved }: { approved: Approved[] }) {
     if (title) form.set("title", title);
     if (supersedesId) form.set("supersedesId", supersedesId);
     try {
+      if (!activeCycle && !supersedesId) {
+        const c = await fetch("/api/v1/cycles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ unitPrice: price }) });
+        const cj = await c.json().catch(() => null);
+        if (!c.ok) throw new ApiError(cj?.error?.code ?? "INTERNAL", cj?.error?.fields?.unitPrice ?? cj?.error?.message ?? "تعذر تجهيز الدورة");
+      }
       const res = await fetch("/api/v1/statements", { method: "POST", body: form });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new ApiError(json?.error?.code ?? "INTERNAL", json?.error?.message ?? "تعذر رفع الملف");
@@ -51,6 +61,17 @@ export function UploadForm({ approved }: { approved: Approved[] }) {
           required
         />
       </Field>
+      {activeCycle ? (
+        <p className="text-sm text-muted md:col-span-2">
+          الكشف سينضاف إلى {activeCycle.name} · سعر الجرة <bdi dir="ltr" className="font-semibold text-text">{activeCycle.unitPrice} {activeCycle.currencySymbol}</bdi>
+        </p>
+      ) : (
+        !supersedesId && (
+          <Field label="سعر الجرة على المواطن (حسب الهيئة)" htmlFor="u-price" hint="مرة واحدة فقط؛ يُستخدم لحساب المطلوب من كل شخص إن لم يذكره الكشف">
+            <Input id="u-price" dir="ltr" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} required className="w-40" />
+          </Field>
+        )
+      )}
       <Field label="عنوان الكشف (اختياري)" htmlFor="u-title" hint="يُستخدم اسم الملف إن تُرك فارغًا">
         <Input id="u-title" value={title} onChange={(e) => setTitle(e.target.value)} />
       </Field>

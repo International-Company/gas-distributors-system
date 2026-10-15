@@ -50,21 +50,21 @@ async function lockRow(tx: Tx, table: "cylinders" | "entitlements", id: string) 
   if (!(await q).length) throw notFound(table === "cylinders" ? "الجرة" : "الاستحقاق");
 }
 
-class IdentityMismatch extends AppError {
+export class IdentityMismatch extends AppError {
   constructor(readonly entered: string, readonly expected: { citizenName: string; citizenNationalId: string; label?: string }) {
     super("IDENTITY_MISMATCH", "رقم الهوية المدخل لا يطابق صاحب الاستحقاق. أُوقفت العملية وسُجلت حالة للمراجعة");
   }
 }
 
 /** التحقق من الهوية: رقم البطاقة المدخل يجب أن يطابق رقم صاحب الاستحقاق. لا يوجد تجاوز يدوي. */
-function verifyIdentity(entered: string, citizen: { nationalId: string; fullName: string }, label?: string) {
+export function verifyIdentity(entered: string, citizen: { nationalId: string; fullName: string }, label?: string) {
   const id = digitsOnly(entered);
   if (!isValidNationalId(id)) throw new AppError("VALIDATION", "رقم الهوية المدخل غير صالح", { nationalId: "رقم الهوية غير صالح" });
   if (id !== citizen.nationalId) throw new IdentityMismatch(id, { citizenName: citizen.fullName, citizenNationalId: citizen.nationalId, label });
 }
 
 /** تُسجل حالة المراجعة في معاملة مستقلة لأن معاملة العملية تُلغى. */
-async function recordIdentityCase(actor: DistributorActor, e: IdentityMismatch, op: string) {
+export async function recordIdentityCase(actor: DistributorActor, e: IdentityMismatch, op: string) {
   await withTenant(actor.distributorId, async (tx) => {
     const c = await tx.reviewCase.create({
       data: {
@@ -444,9 +444,14 @@ export async function getCylinder(actor: Actor, cylinderId: string) {
   });
 }
 
-/** عدد الجرار الفعلية (غير الملغاة) لكل استحقاق: يُستخدم للتحقق من أثر تعديل الكشف. */
+/** عدد الجرار المستلمة فعلًا لكل استحقاق (جرار المراحل غير الملغاة + التسليم المبسّط النافذ): للتحقق من أثر تعديل الكشف. */
 export async function cylinderCounts(tx: Tx, entitlementIds: string[]) {
   if (!entitlementIds.length) return new Map<string, number>();
-  const g = await tx.cylinder.groupBy({ by: ["entitlementId"], where: { entitlementId: { in: entitlementIds }, status: { not: "VOID" } }, _count: { _all: true } });
-  return new Map(g.map((x) => [x.entitlementId, x._count._all]));
+  const [g, h] = await Promise.all([
+    tx.cylinder.groupBy({ by: ["entitlementId"], where: { entitlementId: { in: entitlementIds }, status: { not: "VOID" } }, _count: { _all: true } }),
+    tx.handover.findMany({ where: { entitlementId: { in: entitlementIds }, status: "ACTIVE" }, select: { entitlementId: true, quantity: true } }),
+  ]);
+  const out = new Map(g.map((x) => [x.entitlementId, x._count._all]));
+  for (const x of h) out.set(x.entitlementId, (out.get(x.entitlementId) ?? 0) + x.quantity);
+  return out;
 }

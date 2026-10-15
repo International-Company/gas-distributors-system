@@ -11,10 +11,10 @@ export default function OfflinePage() {
         <WifiOff className="mx-auto mb-3 size-10 text-muted" />
         <h1 className="mb-2 text-lg font-bold">لا يوجد اتصال بالإنترنت</h1>
         <p className="mb-4 text-sm text-muted">
-          هذه الصفحة تحتاج اتصالًا. يعمل دون اتصال: التوزيع (الاستلام والتسليم والتحصيل حسب إعدادات النظام) وصفحة «شغل بدون نت».
+          هذه الصفحة تحتاج اتصالًا. يعمل بدون نت: «الكشف» (سلّم ودفع حسب إعدادات النظام) وصفحة «شغل بدون نت».
         </p>
         <div className="flex justify-center gap-3 text-sm">
-          <Link href="/d/counter" className="text-primary hover:underline">التوزيع</Link>
+          <Link href="/d/sheet" className="text-primary hover:underline">الكشف</Link>
           <Link href="/d/sync" className="text-primary hover:underline">شغل بدون نت</Link>
         </div>
       </div>

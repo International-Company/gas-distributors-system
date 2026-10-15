@@ -21,19 +21,11 @@ const ADMIN_NAV: Def[] = [
   { href: "/account", label: "حسابي", icon: "user", group: "account" },
 ];
 
+// واجهة الموزّع المبسّطة (قرار المالك): الكشف والفلوس فقط. الصفحات الأخرى باقية بروابطها ومخفية من القائمة.
 const DISTRIBUTOR_NAV: Def[] = [
-  { href: "/d", label: "الرئيسية", icon: "home", group: "main" },
-  { href: "/d/counter", label: "التوزيع", icon: "counter", group: "work" },
-  { href: "/d/citizens", label: "الناس", icon: "search", group: "records" },
-  { href: "/d/statements", label: "الكشوفات", icon: "file", group: "records" },
-  { href: "/d/cycles", label: "الدورات", icon: "calendar", group: "records" },
-  { href: "/d/review-cases", label: "مشاكل بدها حل", icon: "alert", group: "records" },
-  { href: "/d/merge", label: "أسماء مكررة", icon: "merge", group: "records" },
-  { href: "/d/cylinders", label: "الجرار", icon: "cylinder", group: "stock" },
-  { href: "/d/shipments", label: "نقلات المحطة", icon: "truck", group: "stock" },
-  { href: "/d/stations", label: "المحطات", icon: "factory", group: "stock" },
-  { href: "/d/finance", label: "الفلوس", icon: "wallet", group: "money" },
-  { href: "/d/reports", label: "التقارير", icon: "chart", group: "insight" },
+  { href: "/d/sheet", label: "الكشف", icon: "users", group: "main" },
+  { href: "/d/statements", label: "الكشوفات", icon: "file", group: "main" },
+  { href: "/d/finance", label: "الفلوس", icon: "wallet", group: "main" },
   { href: "/account", label: "حسابي", icon: "user", group: "account" },
 ];
 
@@ -41,7 +33,7 @@ const DISTRIBUTOR_NAV: Def[] = [
 export type NavOverrides = Record<string, { label?: string; order?: number; hidden?: boolean }>;
 
 /** أقسام لا يجوز إخفاؤها حتى لا يُحجب الوصول إلى الإعدادات أو الحساب. */
-export const NAV_LOCKED = new Set(["/admin", "/admin/settings", "/d", "/account"]);
+export const NAV_LOCKED = new Set(["/admin", "/admin/settings", "/d/sheet", "/account"]);
 
 /** كل الأقسام المعرفة مع القائمة التي تنتمي لها (لشاشة الإعدادات). */
 export const ALL_NAV = [

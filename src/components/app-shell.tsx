@@ -86,7 +86,7 @@ type SidebarProps = { systemName: string; logoUrl?: string | null; nav: NavItem[
  */
 function Sidebar({ systemName, logoUrl, nav, userName, roleLabel, pathname }: SidebarProps) {
   const isActive = (href: string) => isActiveHref(pathname, href);
-  const panel = nav.some((n) => n.href === "/d") ? "لوحة الموزّع" : "لوحة الإدارة";
+  const panel = nav.some((n) => n.href.startsWith("/d")) ? "لوحة الموزّع" : "لوحة الإدارة";
 
   const groups = NAV_GROUPS.filter((g) => g.key !== "account")
     .map((g) => ({ ...g, items: nav.filter((n) => n.group === g.key) }))

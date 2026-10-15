@@ -1,4 +1,5 @@
-// اختبار متصفح للقائمة الجانبية القابلة للطي — للتطوير فقط؛ ينشئ موزّعًا تجريبيًا.
+// اختبار متصفح للقائمة الجانبية — للتطوير فقط؛ ينشئ موزّعًا تجريبيًا.
+// الموزّع: ثلاثة أقسام مباشرة (الكشف، الكشوفات، الفلوس). الإدارة: مجموعات قابلة للطي.
 // الاستخدام: E2E_ADMIN_USER=... E2E_ADMIN_PASSWORD=... CHROME_PATH=... node tests/e2e/nav-browser.mjs http://localhost:3000 ./test-results/nav
 import { chromium } from "playwright-core";
 import { mkdirSync } from "node:fs";
@@ -27,48 +28,43 @@ const login = async (ctx, u, p, change) => {
   if (change) { await pg.waitForURL("**/change-password"); await pg.fill("#cp-current", p); await pg.fill("#cp-new", "Mine-5678"); await pg.fill("#cp-confirm", "Mine-5678"); await pg.click("button[type=submit]"); }
   await pg.waitForLoadState("networkidle"); return pg;
 };
+
+// ---------- الموزّع ----------
 const d = await b.newContext({ viewport: { width: 1280, height: 760 } });
 const dp = await login(d, `navd_${tag}`, "Start-1234", true);
 const aside = dp.locator("aside").first();
-const grp = (name) => aside.getByRole("button", { name });
-
-await dp.goto(BASE + "/d/cylinders"); await dp.waitForLoadState("networkidle");
-check("مجموعة الصفحة الحالية مفتوحة تلقائيًا", (await grp("الجرار والمخزن").getAttribute("aria-expanded")) === "true");
-check("المجموعات الأخرى مطوية افتراضيًا", (await grp("الناس والكشوفات").getAttribute("aria-expanded")) === "false");
-check("أقسام المجموعة المطوية خارج التنقل بلوحة المفاتيح (inert)", (await aside.locator("#nav-group-records").getAttribute("inert")) !== null);
-check("التقارير والفلوس والتوزيع أقسام مباشرة دون عنوان مكرر", (await aside.getByText("التقارير", { exact: true }).count()) === 1 && (await aside.getByRole("link", { name: "الفلوس" }).count()) === 1 && (await aside.getByRole("link", { name: "التوزيع" }).count()) === 1);
-check("«شغل بدون نت» والمخزن والمقبوض والمصاريف خارج القائمة", (await aside.getByRole("link", { name: /^(شغل بدون نت|المخزن|المقبوض|المصاريف|الغلّة)$/ }).count()) === 0);
-check("القسم الحالي مميز (aria-current)", (await aside.locator("[aria-current=page]").textContent()).includes("الجرار"));
-await aside.screenshot({ path: `${OUT}/n-01-default.png` });
-
-await grp("الناس والكشوفات").click();
-await dp.waitForTimeout(300);
-check("فتح مجموعة بالنقر", (await grp("الناس والكشوفات").getAttribute("aria-expanded")) === "true" && await aside.getByRole("link", { name: "الكشوفات" }).isVisible());
-await aside.screenshot({ path: `${OUT}/n-02-opened.png` });
-await grp("الجرار والمخزن").click();
-await dp.waitForTimeout(300);
-check("طي مجموعة الصفحة الحالية يُظهر نقطة تدل عليها", (await grp("الجرار والمخزن").getAttribute("aria-expanded")) === "false");
-await dp.reload(); await dp.waitForLoadState("networkidle");
-check("حالة الطي محفوظة بعد إعادة التحميل", (await grp("الناس والكشوفات").getAttribute("aria-expanded")) === "true");
-await aside.getByRole("link", { name: "الفلوس" }).click();
-await dp.waitForURL("**/d/finance");
-await dp.goto(BASE + "/d/cylinders"); await dp.waitForLoadState("networkidle");
-check("الانتقال لصفحة في مجموعة مطوية يفتحها", (await grp("الجرار والمخزن").getAttribute("aria-expanded")) === "true");
-
-const dd = await b.newContext({ viewport: { width: 1280, height: 760 }, colorScheme: "dark", storageState: await d.storageState() });
-const ddp = await dd.newPage(); await ddp.goto(BASE + "/d/finance?tab=collections"); await ddp.waitForLoadState("networkidle");
-await ddp.evaluate(() => { document.documentElement.classList.remove("light"); document.documentElement.classList.add("dark"); });
-await ddp.locator("aside").first().screenshot({ path: `${OUT}/n-03-dark.png` });
+const links = (await aside.getByRole("link").allTextContents()).map((t) => t.trim()).filter(Boolean);
+check("قائمة الموزّع: الكشف والكشوفات والفلوس فقط", links.filter((l) => ["الكشف", "الكشوفات", "الفلوس"].includes(l)).length === 3 && links.length === 4, links.join("|"));
+check("لا مجموعات منسدلة للموزّع", (await aside.getByRole("button", { expanded: false }).count()) + (await aside.getByRole("button", { expanded: true }).count()) === 0);
+check("عنوان اللوحة «لوحة الموزّع»", (await aside.textContent()).includes("لوحة الموزّع"));
+check("القسم الحالي «الكشف»", (await aside.locator("[aria-current=page]").textContent()).includes("الكشف"));
+await aside.screenshot({ path: `${OUT}/n-01-distributor.png` });
 
 const m = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, storageState: await d.storageState() });
-const mp = await m.newPage(); await mp.goto(BASE + "/d/counter"); await mp.getByLabel("فتح القائمة").tap(); await mp.waitForTimeout(400);
-await mp.screenshot({ path: `${OUT}/n-04-mobile.png` });
+const mp = await m.newPage(); await mp.goto(BASE + "/d/sheet"); await mp.getByLabel("فتح القائمة").tap(); await mp.waitForTimeout(400);
+await mp.screenshot({ path: `${OUT}/n-02-mobile.png` });
 check("الهاتف: لا تمرير أفقي", (await mp.evaluate(() => document.documentElement.scrollWidth)) <= 390);
 
+// ---------- الإدارة: مجموعات قابلة للطي ----------
 const a = await b.newContext({ viewport: { width: 1280, height: 760 } });
-const ap = await login(a, U, P, false); await ap.goto(BASE + "/admin/audit"); await ap.waitForLoadState("networkidle");
-check("قائمة الإدارة: مجموعة «الموزّعين» وأقسامها", (await ap.locator("aside").first().getByRole("button", { name: "الموزّعين", exact: true }).count()) === 1 && (await ap.locator("aside").first().getByRole("link", { name: "المجموعات" }).count()) === 1);
-await ap.locator("aside").first().screenshot({ path: `${OUT}/n-05-admin.png` });
+const ap = await login(a, U, P, false);
+const aa = ap.locator("aside").first();
+const grp = (name) => aa.getByRole("button", { name, exact: true });
+await ap.goto(BASE + "/admin/audit"); await ap.waitForLoadState("networkidle");
+check("مجموعة الصفحة الحالية مفتوحة تلقائيًا", (await grp("المتابعة والتقارير").getAttribute("aria-expanded")) === "true");
+check("المجموعات الأخرى مطوية افتراضيًا", (await grp("الموزّعين").getAttribute("aria-expanded")) === "false");
+check("أقسام المجموعة المطوية خارج التنقل بلوحة المفاتيح (inert)", (await aa.locator("#nav-group-people").getAttribute("inert")) !== null);
+await grp("الموزّعين").click();
+await ap.waitForTimeout(300);
+check("فتح مجموعة بالنقر", (await grp("الموزّعين").getAttribute("aria-expanded")) === "true" && await aa.getByRole("link", { name: "المجموعات" }).isVisible());
+await ap.reload(); await ap.waitForLoadState("networkidle");
+check("حالة الطي محفوظة بعد إعادة التحميل", (await grp("الموزّعين").getAttribute("aria-expanded")) === "true");
+await grp("المتابعة والتقارير").click();
+await ap.waitForTimeout(300);
+await ap.goto(BASE + "/admin/errors"); await ap.waitForLoadState("networkidle");
+check("الانتقال لصفحة في مجموعة مطوية يفتحها", (await grp("المتابعة والتقارير").getAttribute("aria-expanded")) === "true");
+await aa.screenshot({ path: `${OUT}/n-03-admin.png` });
+
 await b.close();
 console.log(`\nفشل: ${fails}`);
 process.exit(fails ? 1 : 0);

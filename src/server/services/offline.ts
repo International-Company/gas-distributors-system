@@ -27,6 +27,9 @@ export type SnapshotEntitlement = {
   paid: string;
   billable: boolean;
   cylinders: SnapshotCylinder[];
+  statementId: string;
+  /** سُلّم بالتسليم المبسّط («سلّم»). */
+  handedOver: boolean;
 };
 export type SnapshotCitizen = { citizenId: string; nationalId: string; fullName: string; entitlements: SnapshotEntitlement[] };
 export type OfflineSnapshot = {
@@ -35,6 +38,8 @@ export type OfflineSnapshot = {
   distributorId: string;
   currencySymbol: string;
   policy: OfflinePolicy;
+  /** الكشوف المعتمدة (لصفحة «الكشف» دون اتصال). */
+  statements: { id: string; title: string }[];
   citizens: SnapshotCitizen[];
 };
 
@@ -46,6 +51,7 @@ export async function offlinePolicy(): Promise<OfflinePolicy & { currencySymbol:
 type EntRow = {
   id: string; cycleId: string; cycleName: string; cycleStatus: string; status: string; citizenNumber: string; quantity: number;
   amountDue: Prisma.Decimal; paid: Prisma.Decimal; billable: boolean; citizenId: string; nationalId: string; fullName: string;
+  statementId: string; handedOver: boolean;
 };
 
 /**
@@ -61,6 +67,8 @@ export async function offlineSnapshot(actor: Actor): Promise<OfflineSnapshot | {
     const ents = await tx.$queryRaw<EntRow[]>`
       WITH paid AS (
         SELECT "entitlementId", sum("amount") AS s FROM "payments" WHERE "status" = 'ACTIVE' GROUP BY 1
+      ), hand AS (
+        SELECT DISTINCT "entitlementId" FROM "handovers" WHERE "status" = 'ACTIVE'
       ), cyl AS (
         SELECT "entitlementId",
           count(*) FILTER (WHERE "status" IN ('EMPTY', 'FILLED')) AS pending,
@@ -69,17 +77,18 @@ export async function offlineSnapshot(actor: Actor): Promise<OfflineSnapshot | {
       )
       SELECT e."id", e."cycleId", cy."name" AS "cycleName", cy."status"::text AS "cycleStatus", e."status"::text AS "status",
         e."citizenNumber", e."quantity", e."amountDue", COALESCE(p.s, 0) AS paid,
-        (e."status" = 'ACTIVE' OR COALESCE(y.live, 0) > 0) AS billable,
-        c."id" AS "citizenId", c."nationalId", c."fullName"
+        (e."status" = 'ACTIVE' OR COALESCE(y.live, 0) > 0 OR hd."entitlementId" IS NOT NULL) AS billable,
+        c."id" AS "citizenId", c."nationalId", c."fullName", e."statementId", (hd."entitlementId" IS NOT NULL) AS "handedOver"
       FROM "entitlements" e
       JOIN "cycles" cy ON cy."id" = e."cycleId"
       JOIN "citizens" c ON c."id" = e."citizenId"
       LEFT JOIN paid p ON p."entitlementId" = e."id"
       LEFT JOIN cyl y ON y."entitlementId" = e."id"
+      LEFT JOIN hand hd ON hd."entitlementId" = e."id"
       WHERE c."mergedIntoId" IS NULL AND (
         cy."status" = 'OPEN'
         OR COALESCE(y.pending, 0) > 0
-        OR ((e."status" = 'ACTIVE' OR COALESCE(y.live, 0) > 0) AND e."amountDue" > COALESCE(p.s, 0))
+        OR ((e."status" = 'ACTIVE' OR COALESCE(y.live, 0) > 0 OR hd."entitlementId" IS NOT NULL) AND e."amountDue" > COALESCE(p.s, 0))
       )
       ORDER BY cy."number" DESC`;
     const ids = ents.map((e) => e.id);
@@ -105,9 +114,12 @@ export async function offlineSnapshot(actor: Actor): Promise<OfflineSnapshot | {
         paid: new Prisma.Decimal(e.paid).toFixed(2),
         billable: e.billable,
         cylinders: byEnt.get(e.id) ?? [],
+        statementId: e.statementId,
+        handedOver: e.handedOver,
       });
       citizens.set(e.citizenId, c);
     }
+    const statements = await tx.statement.findMany({ where: { status: "APPROVED" }, select: { id: true, title: true }, orderBy: { approvedAt: "desc" } });
     await audit(tx, actor, { action: "offline.snapshot", entityType: "distributor", entityId: actor.distributorId, distributorId: actor.distributorId, after: { citizens: citizens.size, entitlements: ents.length } });
     const { currencySymbol, ...p } = policy;
     return {
@@ -116,6 +128,7 @@ export async function offlineSnapshot(actor: Actor): Promise<OfflineSnapshot | {
       distributorId: actor.distributorId,
       currencySymbol,
       policy: p,
+      statements,
       citizens: [...citizens.values()],
     };
   }, { timeout: 30_000 });

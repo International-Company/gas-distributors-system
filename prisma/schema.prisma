@@ -458,6 +458,7 @@ model Entitlement {
   changes   EntitlementChange[]
   cylinders Cylinder[]
   payments  Payment[]
+  handovers Handover[]
 
   @@index([distributorId, citizenNumber])
   @@index([citizenId])
@@ -775,4 +776,33 @@ model StationPayment {
   @@unique([distributorId, idempotencyKey])
   @@index([stationId, paidAt])
   @@map("station_payments")
+}
+
+// ============================================================
+// التسليم المبسّط (قرار المالك): «سلّم» واحد لكل استحقاق، دون مراحل فارغة/معبأة.
+// تسليم نافذ واحد فقط لكل استحقاق (قيد في قاعدة البيانات)، والتصحيح بالإلغاء مع السبب.
+// ============================================================
+
+model Handover {
+  id             String          @id @default(uuid()) @db.Uuid
+  distributorId  String          @db.Uuid
+  entitlementId  String          @db.Uuid
+  entitlement    Entitlement     @relation(fields: [entitlementId], references: [id])
+  // عدد الجرار المسلّمة = عدد جرار الاستحقاق وقت التسليم.
+  quantity       Int
+  status         OperationStatus @default(ACTIVE)
+  idempotencyKey String
+  identityMethod IdentityMethod?
+  userId         String          @db.Uuid
+  at             DateTime        @default(now())
+  // وقت التنفيذ على الجهاز إن نُفذ دون اتصال.
+  offlineAt      DateTime?
+  cancelledAt    DateTime?
+  cancelledById  String?         @db.Uuid
+  cancelReason   String?
+
+  @@unique([distributorId, idempotencyKey])
+  @@index([entitlementId])
+  @@index([distributorId, at])
+  @@map("handovers")
 }

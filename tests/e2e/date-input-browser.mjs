@@ -125,7 +125,7 @@ await dp.fill("#cp-current", "Start-1234");
 await dp.fill("#cp-new", "Mine-5678");
 await dp.fill("#cp-confirm", "Mine-5678");
 await dp.click("button[type=submit]");
-await dp.waitForURL("**/d");
+await dp.waitForURL(/\/d(\/sheet)?$/);
 await dp.goto(BASE + "/d/finance?tab=expenses");
 await dp.fill("#ex-amount", "12");
 await dp.fill("#ex-desc", "مصروف اختبار التاريخ");

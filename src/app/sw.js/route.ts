@@ -21,7 +21,7 @@ function buildId() {
 const source = (version: string) => `
 const VERSION = ${JSON.stringify(version)};
 const CACHE = "gas-" + VERSION;
-const OFFLINE_PAGES = ["/d/counter", "/d/sync"];
+const OFFLINE_PAGES = ["/d/sheet", "/d/counter", "/d/sync"];
 const FALLBACK = "/offline";
 
 self.addEventListener("install", (event) => {

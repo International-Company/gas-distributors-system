@@ -133,7 +133,8 @@ export async function centralOverview(actor: Actor, filters: unknown) {
         (SELECT COALESCE(sum(e."quantity"), 0) FROM "entitlements" e WHERE e."cycleId" = y."id" AND e."status" = 'ACTIVE') AS entitled,
         (SELECT count(*) FROM "cylinders" z WHERE z."cycleId" = y."id" AND z."status" <> 'VOID') AS received,
         (SELECT count(*) FROM "cylinders" z WHERE z."cycleId" = y."id" AND z."status" = 'FILLED') AS filled,
-        (SELECT count(*) FROM "cylinders" z WHERE z."cycleId" = y."id" AND z."status" = 'DELIVERED') AS delivered,
+        ((SELECT count(*) FROM "cylinders" z WHERE z."cycleId" = y."id" AND z."status" = 'DELIVERED')
+          + COALESCE((SELECT sum(h."quantity") FROM "handovers" h JOIN "entitlements" he ON he."id" = h."entitlementId" WHERE he."cycleId" = y."id" AND h."status" = 'ACTIVE'), 0)) AS delivered,
         b."empty" AS "stockEmpty", b."filled" AS "stockFilled", b."extra" AS "stockExtra",
         (SELECT COALESCE(sum(p."amount"), 0) FROM "payments" p WHERE p."distributorId" = d."id" AND p."status" = 'ACTIVE') AS collected,
         (SELECT COALESCE(sum(e."amountDue"), 0) FROM "entitlements" e WHERE e."distributorId" = d."id"

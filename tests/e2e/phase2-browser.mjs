@@ -76,8 +76,9 @@ await page.fill("#cp-current", "Start-1234");
 await page.fill("#cp-new", "Mine-5678");
 await page.fill("#cp-confirm", "Mine-5678");
 await page.click("button[type=submit]");
-await page.waitForURL("**/d");
-check("دخول الموزّع ولوحته", await page.getByText("لا توجد دورة نشطة").isVisible());
+await page.waitForURL(/\/d(\/sheet)?$/);
+await page.getByText("ما في كشف معتمد بعد").waitFor();
+check("دخول الموزّع إلى «الكشف» الفارغ مع إرشاد", await page.getByText("ما في كشف معتمد بعد").isVisible());
 
 // دورة جديدة
 await page.goto(BASE + "/d/cycles");

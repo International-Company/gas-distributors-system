@@ -68,7 +68,7 @@ await page.fill("#cp-current", "Start-1234");
 await page.fill("#cp-new", "Mine-5678");
 await page.fill("#cp-confirm", "Mine-5678");
 await page.click("button[type=submit]");
-await page.waitForURL("**/d");
+await page.waitForURL(/\/d(\/sheet)?$/);
 await page.goto(BASE + "/d/cycles");
 await page.fill("#c-price", "25");
 await page.click("text=بدء الدورة");
@@ -138,8 +138,8 @@ await ap.goto(`${BASE}/admin/reports/unpaid?distributorId=${distributorId}`);
 check("المدير يرى تقرير موزّع محدد", (await body(ap)).includes("40.00"));
 
 await ap.goto(BASE + "/admin/settings");
-await ap.fill("input[aria-label='اسم التوزيع']", "نقطة التوزيع");
-await ap.fill("input[aria-label='ترتيب التوزيع']", "0");
+await ap.fill("input[aria-label='اسم الفلوس']", "صندوقي");
+await ap.fill("input[aria-label='ترتيب الفلوس']", "0");
 await ap.getByRole("button", { name: "حفظ القائمة" }).click();
 await ap.waitForSelector("text=حُفظت القائمة");
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR4nGNk+M+AFzDhlx41YNQAKgMAJ9kBH1Cb3x4AAAAASUVORK5CYII=", "base64");
@@ -152,13 +152,13 @@ check("رفع الشعار", true);
 
 await page.goto(BASE + "/d");
 const menu = await body();
-check("القائمة المخصصة تظهر للموزّع وبالشعار", menu.includes("نقطة التوزيع") && (await page.locator("aside img").count()) > 0);
+check("القائمة المخصصة تظهر للموزّع وبالشعار", menu.includes("صندوقي") && (await page.locator("aside img").count()) > 0);
 await page.screenshot({ path: `${OUT}/p5-04-custom-nav.png` });
 
 // إعادة الإعدادات
 await ap.goto(BASE + "/admin/settings");
-await ap.fill("input[aria-label='اسم التوزيع']", "");
-await ap.fill("input[aria-label='ترتيب التوزيع']", "");
+await ap.fill("input[aria-label='اسم الفلوس']", "");
+await ap.fill("input[aria-label='ترتيب الفلوس']", "");
 await ap.getByRole("button", { name: "حفظ القائمة" }).click();
 await ap.waitForSelector("text=حُفظت القائمة");
 await ap.getByRole("button", { name: "إزالة" }).click();

@@ -53,11 +53,13 @@ const ENT_STATE_LABELS: Record<string, string> = {
   NOT_RECEIVED: "لسا ما جاب الجرة", EMPTY: "بدها تعبية", FILLED: "جاهزة للتسليم", DELIVERED: "سُلّمت", PARTIAL: "سُلّم جزء",
 };
 
+// التسليم المبسّط النافذ يُحسب كأن كل جرار الاستحقاق استُلمت وسُلّمت.
+const handoverQty = Prisma.sql`COALESCE((SELECT h."quantity" FROM "handovers" h WHERE h."entitlementId" = e."id" AND h."status" = 'ACTIVE'), 0)`;
 const entitlementStats = Prisma.sql`
-  count(y.*) FILTER (WHERE y."status" <> 'VOID') AS received,
+  count(y.*) FILTER (WHERE y."status" <> 'VOID') + ${handoverQty} AS received,
   count(y.*) FILTER (WHERE y."status" = 'EMPTY') AS empty,
   count(y.*) FILTER (WHERE y."status" = 'FILLED') AS filled,
-  count(y.*) FILTER (WHERE y."status" = 'DELIVERED') AS delivered`;
+  count(y.*) FILTER (WHERE y."status" = 'DELIVERED') + ${handoverQty} AS delivered`;
 
 type EntRow = {
   citizenNumber: string; name: string; nationalId: string; phone: string | null; quantity: number;

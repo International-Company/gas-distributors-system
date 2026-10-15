@@ -5,6 +5,7 @@ import { ownerDb } from "../helpers/factories";
 // هذا الاختبار يفشل إن حذفها ترحيل لاحق بالخطأ.
 
 const CONSTRAINTS = [
+  "handovers_entitlement_dist", "handovers_quantity_positive", "handovers_cancel_consistent",
   "system_settings_offline_age_range",
   "cylinder_operations_weight_valid",
   "users_role_distributor", "distributors_archived_consistent", "system_settings_singleton",
@@ -17,17 +18,20 @@ const CONSTRAINTS = [
   "expenses_amount_positive", "station_payments_amount_positive", "shipments_unit_price_non_negative",
 ];
 const INDEXES = [
+  "handovers_one_active_per_entitlement",
   "review_cases_distributorId_sourceOpId_key",
   "cycles_one_open_per_distributor", "entitlements_active_citizen_per_cycle", "entitlements_active_number_per_cycle",
   "cylinders_unit_once", "cylinders_label_per_cycle", "cylinder_operations_once", "citizens_name_trgm",
 ];
 const TRIGGERS = [
+  "handovers_cancel_only",
   "audit_logs_append_only", "login_attempts_append_only", "cycle_events_append_only", "entitlement_changes_append_only",
   "file_blobs_immutable", "statement_rows_guard", "inventory_movements_append_only",
   "payments_cancel_only", "expenses_cancel_only", "station_payments_cancel_only", "shipments_cancel_only", "cylinder_operations_cancel_only",
   "payments_no_overpayment", "entitlements_due_not_below_paid",
 ];
 const RLS_TABLES = [
+  "handovers",
   "distributors", "users", "audit_logs", "cycles", "statements", "statement_rows", "citizens", "entitlements", "stored_files",
   "file_blobs", "cylinders", "cylinder_operations", "stations", "shipments", "inventory_movements", "inventory_balances",
   "payments", "expenses", "station_payments",
