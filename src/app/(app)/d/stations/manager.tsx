@@ -44,7 +44,7 @@ export function StationsManager({ rows }: { rows: S[] }) {
       </Card>
       {rowError && <Alert tone="danger">{rowError}</Alert>}
       {rows.length === 0 ? (
-        <EmptyState>لا توجد محطات.</EmptyState>
+        <EmptyState>ما في محطات بعد. أضف المحطة اللي بتعبّي منها من النموذج أعلاه مع سعر الجرة عندها.</EmptyState>
       ) : (
         <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {rows.map((s) => (

@@ -44,7 +44,7 @@ export default async function CylinderPage({ params }: { params: Promise<{ id: s
                   {o.weightKg && <span className="text-xs text-muted"> · الوزن: <bdi>{o.weightKg.toFixed(2)}</bdi> كغ</span>}
                   {o.identityMethod && <span className="text-xs text-muted"> · الهوية: {o.identityMethod === "ID_SCAN" ? "من صورة البطاقة" : "إدخال يدوي من البطاقة"}</span>}
                 </span>
-                {o.status === "CANCELLED" ? <Badge tone="danger">ملغاة</Badge> : <Badge tone="success">نافذة</Badge>}
+                {o.status === "CANCELLED" ? <Badge tone="danger">ملغاة</Badge> : <Badge tone="success">مسجّلة</Badge>}
               </div>
               <div className="mt-1 text-xs text-muted">{formatDateTime(o.at)} · {c.userNames[o.userId] ?? "—"}</div>
               {o.status === "CANCELLED" && (

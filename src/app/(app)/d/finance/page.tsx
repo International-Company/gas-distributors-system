@@ -1,71 +1,31 @@
-import Link from "next/link";
 import { requirePageActor } from "@/server/http/context";
-import { cashBox } from "@/server/services/finance";
-import { listCycles } from "@/server/services/cycles";
-import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Stat } from "@/components/ui";
-import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
-import { DateInput } from "@/components/date-input";
+import { PageHeader } from "@/components/ui";
+import { Tabs } from "@/components/tabs";
+import { SummarySection } from "./summary";
+import { CollectionsSection } from "./collections";
+import { ExpensesSection } from "./expenses";
 
-export const metadata = { title: "الغلّة" };
+export const metadata = { title: "الفلوس" };
 
-const KIND: Record<string, { label: string; tone: "success" | "warning" | "neutral" }> = {
-  PAYMENT: { label: "تحصيل", tone: "success" },
-  EXPENSE: { label: "مصروف", tone: "warning" },
-  STATION_PAYMENT: { label: "دفعة محطة", tone: "neutral" },
-};
+const TABS = [
+  { key: "summary", label: "الملخص" },
+  { key: "collections", label: "المقبوض" },
+  { key: "expenses", label: "المصاريف" },
+] as const;
+type TabKey = (typeof TABS)[number]["key"];
 
+/** صفحة الفلوس: الملخص (الغلّة) والمقبوض والمصاريف في تبويبات. */
 export default async function FinancePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
   const sp = await searchParams;
-  const filters = Object.fromEntries(Object.entries({ from: sp.from, to: sp.to, cycleId: sp.cycleId }).filter(([, v]) => v)) as Record<string, string>;
-  const [box, cycles] = await Promise.all([cashBox(actor, filters), listCycles(actor)]);
+  const tab: TabKey = TABS.some((t) => t.key === sp.tab) ? (sp.tab as TabKey) : "summary";
   return (
-    <div className="space-y-6">
-      <PageHeader title="الغلّة" />
-      <form method="get" className="flex flex-wrap gap-2 rounded-xl border border-border bg-surface p-3">
-        <Select name="cycleId" defaultValue={sp.cycleId ?? ""} className="w-48" aria-label="الدورة">
-          <option value="">كل الدورات</option>
-          {cycles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </Select>
-        <DateInput name="from" defaultValue={sp.from} className="w-40" aria-label="من تاريخ" />
-        <DateInput name="to" defaultValue={sp.to} className="w-40" aria-label="إلى تاريخ" />
-        <Button type="submit" variant="secondary">تطبيق</Button>
-        {Object.keys(filters).length > 0 && <Link href="/d/finance" className="self-center text-sm text-primary hover:underline">مسح</Link>}
-      </form>
-      {(box.cycle || box.range.from || box.range.to) && (
-        <p className="text-sm text-muted">
-          {box.cycle ? `الدورة: ${box.cycle.name} — ` : ""}الفترة: {box.range.from ? formatDate(box.range.from) : "البداية"} إلى {box.range.to ? formatDate(box.range.to) : "الآن"}
-          {box.cycle && " (المقبوض المرتبط بالدورة، والمصاريف ودفعات المحطات خلال فترتها)"}
-        </p>
-      )}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Link href="/d/collections"><Stat label="المقبوضات (تحصيلات)" value={formatMoney(box.receipts)} tone="success" /></Link>
-        <Link href="/d/expenses"><Stat label="المصاريف" value={formatMoney(box.expenses)} tone="warning" /></Link>
-        <Link href="/d/stations"><Stat label="دفعات المحطات" value={formatMoney(box.stationPayments)} /></Link>
-        <Stat label="الرصيد المحسوب" value={formatMoney(box.balance)} tone={box.balance.isNeg() ? "danger" : "primary"} />
-      </div>
-      <Alert tone="warning">الرصيد محسوب من السجلات المسجلة في النظام، ولا يثبت مقدار النقد الموجود فعلًا في الغلّة.</Alert>
-      <Card title="الحركات">
-        {box.entries.length === 0 ? (
-          <EmptyState>لا توجد حركات.</EmptyState>
-        ) : (
-          <ul className="divide-y divide-border text-sm">
-            {box.entries.map((e) => (
-              <li key={`${e.kind}-${e.id}`} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <span className="flex items-center gap-2">
-                  <Badge tone={KIND[e.kind].tone}>{KIND[e.kind].label}</Badge>
-                  <span>{e.description}</span>
-                </span>
-                <span className="flex items-center gap-3">
-                  <span className="text-xs text-muted">{formatDateTime(e.at)}</span>
-                  <strong className={e.amount.isNeg() ? "text-danger" : "text-success"}>{formatMoney(e.amount)}</strong>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {box.truncated && <p className="mt-2 text-xs text-muted">تُعرض آخر 500 حركة؛ ضيّق الفترة لعرض الباقي. الإجماليات أعلاه تشمل كل الحركات.</p>}
-      </Card>
+    <div className="space-y-5">
+      <PageHeader title="الفلوس" />
+      <Tabs items={TABS.map((t) => ({ href: t.key === "summary" ? "/d/finance" : `/d/finance?tab=${t.key}`, label: t.label, active: t.key === tab }))} />
+      {tab === "summary" && <SummarySection actor={actor} sp={sp} />}
+      {tab === "collections" && <CollectionsSection actor={actor} sp={sp} />}
+      {tab === "expenses" && <ExpensesSection actor={actor} sp={sp} />}
     </div>
   );
 }

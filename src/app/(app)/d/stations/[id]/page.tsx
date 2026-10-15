@@ -37,7 +37,7 @@ export default async function StationPage({ params, searchParams }: { params: Pr
         </form>
         {acc.period.from && <p className="mb-2 text-sm">الرصيد الافتتاحي في {formatDate(acc.period.from)}: <strong>{formatMoney(acc.period.opening)}</strong></p>}
         {acc.entries.length === 0 ? (
-          <EmptyState>لا توجد حركات في الفترة.</EmptyState>
+          <EmptyState>ما في نقلات أو دفعات لهذه المحطة في الفترة.</EmptyState>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-sm">

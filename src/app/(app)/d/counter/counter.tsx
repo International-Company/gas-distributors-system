@@ -162,7 +162,7 @@ export function Counter() {
       return outcome(
         r,
         (res) => `سُجل استلام الجرة الفارغة. اكتب الرقم ${isolate((res as { cylinder?: { label: string } })?.cylinder?.label ?? label)} على الجرة.`,
-        `حُفظ الاستلام على هذا الجهاز ولم يتأكد من الخادم بعد (بانتظار المزامنة). اكتب الرقم ${isolate(label)} على الجرة.`,
+        `حُفظ الاستلام على هذا الجهاز ولم يتأكد من الخادم بعد (بانتظار الإرسال). اكتب الرقم ${isolate(label)} على الجرة.`,
       );
     });
 
@@ -184,8 +184,8 @@ export function Counter() {
         r,
         () => `سُلّمت الجرة ${isolate(c.label)}.`,
         mayHandOver
-          ? `حُفظ تسليم الجرة ${isolate(c.label)} على هذا الجهاز (بانتظار المزامنة).`
-          : `لم يصل تأكيد الخادم لتسليم الجرة ${isolate(c.label)}. لا تسلّمها حتى يظهر التسليم «متزامنًا» في «شغل بدون نت»؛ تُعاد المحاولة تلقائيًا.`,
+          ? `حُفظ تسليم الجرة ${isolate(c.label)} على هذا الجهاز (بانتظار الإرسال).`
+          : `لم يصل تأكيد الخادم لتسليم الجرة ${isolate(c.label)}. لا تسلّمها حتى يظهر التسليم «وصلت» في «شغل بدون نت»؛ تُعاد المحاولة تلقائيًا.`,
       );
     });
 
@@ -209,7 +209,7 @@ export function Counter() {
         const x = res as { amount: string; remaining: string };
         return `سُجل تحصيل ${formatMoney(x.amount)}. المتبقي: ${formatMoney(x.remaining)}`;
       },
-      `حُفظ تحصيل ${formatMoney(amount)} على هذا الجهاز (بانتظار المزامنة).`,
+      `حُفظ تحصيل ${formatMoney(amount)} على هذا الجهاز (بانتظار الإرسال).`,
     );
     return { message: n.text, tone: n.tone };
   };
@@ -303,7 +303,7 @@ export function Counter() {
                       <span className="flex items-center gap-2">
                         <span className="text-lg font-bold"><bdi dir="ltr">{c.label}</bdi></span>
                         <CylinderStatusBadge status={c.status} />
-                        {c.local && <Badge tone="warning">بانتظار المزامنة</Badge>}
+                        {c.local && <Badge tone="warning">بانتظار الإرسال</Badge>}
                       </span>
                       {c.status === "FILLED" && allowed("deliver") && (
                         <Button size="sm" onClick={() => setDeliverFor(c)}><PackageCheck className="size-4" /> تسليم</Button>

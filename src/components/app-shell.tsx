@@ -79,19 +79,14 @@ export function AppShell({ systemName, logoUrl, nav, userName, roleLabel, userId
 }
 
 type SidebarProps = { systemName: string; logoUrl?: string | null; nav: NavItem[]; userName: string; roleLabel: string; pathname: string };
-type Badge = { n: number; danger: boolean } | null;
 
 /**
  * القائمة الجانبية: مجموعات قابلة للطي. تُفتح تلقائيًا مجموعة الصفحة الحالية، وتُحفظ حالة الطي على الجهاز.
  * المجموعة ذات القسم الواحد تُعرض قسمًا مباشرًا دون عنوان مكرر.
  */
 function Sidebar({ systemName, logoUrl, nav, userName, roleLabel, pathname }: SidebarProps) {
-  const offline = useOffline();
   const isActive = (href: string) => isActiveHref(pathname, href);
   const panel = nav.some((n) => n.href === "/d") ? "لوحة الموزّع" : "لوحة الإدارة";
-  // عدّاد المزامنة يُحسب مرة واحدة هنا ويُمرر لقسم المزامنة فقط.
-  const sync: Badge = offline?.enabled && offline.unsynced + offline.review > 0 ? { n: offline.unsynced + offline.review, danger: offline.review > 0 } : null;
-  const badgeFor = (href: string): Badge => (href === "/d/sync" ? sync : null);
 
   const groups = NAV_GROUPS.filter((g) => g.key !== "account")
     .map((g) => ({ ...g, items: nav.filter((n) => n.group === g.key) }))
@@ -147,12 +142,11 @@ function Sidebar({ systemName, logoUrl, nav, userName, roleLabel, pathname }: Si
       <div className="nav-scroll flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
         {groups.map((g) => {
           if (!g.label || g.items.length === 1) {
-            return g.items.map((item) => <NavLink key={item.href} item={item} active={isActive(item.href)} badge={badgeFor(item.href)} />);
+            return g.items.map((item) => <NavLink key={item.href} item={item} active={isActive(item.href)} />);
           }
           const open = isOpen(g.key);
           const Icon = GROUP_ICONS[g.key] ?? Home;
           const hasActive = g.key === activeGroup;
-          const badge = g.items.map((i) => badgeFor(i.href)).find(Boolean) ?? null;
           const panelId = `nav-group-${g.key}`;
           return (
             <div key={g.key}>
@@ -168,8 +162,7 @@ function Sidebar({ systemName, logoUrl, nav, userName, roleLabel, pathname }: Si
               >
                 <Icon className={cn("size-[18px] shrink-0", hasActive ? "text-primary" : "text-muted")} />
                 <span className="min-w-0 flex-1 truncate text-start">{g.label}</span>
-                {!open && badge && <CountBadge {...badge} />}
-                {!open && hasActive && !badge && <span className="size-1.5 rounded-full bg-primary" aria-hidden />}
+                {!open && hasActive && <span className="size-1.5 rounded-full bg-primary" aria-hidden />}
                 <ChevronDown className={cn("size-4 shrink-0 text-muted transition-transform duration-200 motion-reduce:transition-none", open && "rotate-180")} />
               </button>
               <div
@@ -183,7 +176,7 @@ function Sidebar({ systemName, logoUrl, nav, userName, roleLabel, pathname }: Si
                 <ul className="ms-[1.3rem] min-h-0 space-y-0.5 overflow-hidden border-s border-border ps-2">
                   {g.items.map((item) => (
                     <li key={item.href} className="first:mt-0.5 last:mb-1">
-                      <NavLink item={item} active={isActive(item.href)} badge={badgeFor(item.href)} nested />
+                      <NavLink item={item} active={isActive(item.href)} nested />
                     </li>
                   ))}
                 </ul>
@@ -213,15 +206,7 @@ function Sidebar({ systemName, logoUrl, nav, userName, roleLabel, pathname }: Si
   );
 }
 
-function CountBadge({ n, danger }: { n: number; danger: boolean }) {
-  return (
-    <span className={cn("min-w-5 rounded-full px-1.5 text-center text-[11px] font-bold leading-5 tabular-nums", danger ? "bg-danger text-white" : "bg-warning-soft text-warning")}>
-      {n}
-    </span>
-  );
-}
-
-function NavLink({ item, active, badge, nested }: { item: NavItem; active: boolean; badge: Badge; nested?: boolean }) {
+function NavLink({ item, active, nested }: { item: NavItem; active: boolean; nested?: boolean }) {
   const Icon = ICONS[item.icon];
   return (
     <Link
@@ -236,7 +221,6 @@ function NavLink({ item, active, badge, nested }: { item: NavItem; active: boole
       {active && <span className="absolute inset-y-2 start-0 w-1 rounded-full bg-primary" aria-hidden />}
       <Icon className={cn("shrink-0", nested ? "size-4" : "size-[18px]", active ? "text-primary" : "text-muted")} />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
-      {badge && <CountBadge {...badge} />}
     </Link>
   );
 }

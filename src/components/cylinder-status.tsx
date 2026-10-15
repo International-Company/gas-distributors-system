@@ -1,8 +1,8 @@
 import { Badge } from "./ui";
 
 export const CYLINDER_STATUS: Record<string, { label: string; tone: "warning" | "primary" | "success" | "neutral" }> = {
-  EMPTY: { label: "فارغة بانتظار التعبئة", tone: "warning" },
-  FILLED: { label: "معبأة جاهزة", tone: "primary" },
+  EMPTY: { label: "بدها تعبية", tone: "warning" },
+  FILLED: { label: "جاهزة للتسليم", tone: "primary" },
   DELIVERED: { label: "سُلّمت", tone: "success" },
   VOID: { label: "ملغاة", tone: "neutral" },
 };

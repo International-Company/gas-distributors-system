@@ -1,9 +1,9 @@
 import { Badge } from "./ui";
 
 export const STATEMENT_STATUS: Record<string, { label: string; tone: "warning" | "success" | "neutral" | "danger" }> = {
-  PENDING_REVIEW: { label: "قيد المراجعة", tone: "warning" },
+  PENDING_REVIEW: { label: "بانتظار الاعتماد", tone: "warning" },
   APPROVED: { label: "معتمد", tone: "success" },
-  SUPERSEDED: { label: "إصدار سابق", tone: "neutral" },
+  SUPERSEDED: { label: "نسخة قديمة", tone: "neutral" },
   DISCARDED: { label: "ملغى", tone: "danger" },
 };
 

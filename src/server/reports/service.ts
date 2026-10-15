@@ -173,7 +173,7 @@ export async function centralOverviewReport(actor: Actor, filters: unknown): Pro
     columns: [
       { key: "name", label: "الموزّع", width: 24 }, { key: "region", label: "المنطقة" }, { key: "status", label: "الحالة" }, { key: "cycle", label: "الدورة النشطة" },
       { key: "citizens", label: "المستحقون", type: "number" }, { key: "entitled", label: "الجرار المستحقة", type: "number" },
-      { key: "received", label: "استُلمت فارغة", type: "number" }, { key: "filled", label: "معبأة جاهزة", type: "number" }, { key: "delivered", label: "سُلّمت", type: "number" },
+      { key: "received", label: "استُلمت فارغة", type: "number" }, { key: "filled", label: "جاهزة للتسليم", type: "number" }, { key: "delivered", label: "سُلّمت", type: "number" },
       { key: "stockEmpty", label: "مخزون فارغ", type: "number" }, { key: "stockFilled", label: "مخزون معبأ", type: "number" },
       { key: "collected", label: "المحصل", type: "money" }, { key: "outstanding", label: "المستحقات", type: "money" },
     ],

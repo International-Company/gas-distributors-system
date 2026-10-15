@@ -22,7 +22,7 @@ export default async function CyclePage({ params }: { params: Promise<{ id: stri
         <Stat label="المستحقون" value={s.citizens} tone="primary" />
         <Stat label="الجرار المستحقة" value={s.cylinders} />
         <Stat label="المطلوب / المحصل" value={<span>{formatMoney(s.amountDue)} <span className="text-base text-success">/ {formatMoney(s.collected)}</span></span>} />
-        <Stat label="كشوف قيد المراجعة" value={s.pendingStatements} tone={s.pendingStatements ? "warning" : "neutral"} />
+        <Stat label="كشوف بانتظار الاعتماد" value={s.pendingStatements} tone={s.pendingStatements ? "warning" : "neutral"} />
       </div>
       <Card title="بيانات الدورة">
         <DetailList
@@ -34,8 +34,8 @@ export default async function CyclePage({ params }: { params: Promise<{ id: stri
           ]}
         />
         <div className="mt-4 grid grid-cols-3 gap-3">
-          <Stat label="فارغة لم تُعبأ" value={s.cylinderStates.empty} tone={s.cylinderStates.empty ? "warning" : "neutral"} />
-          <Stat label="معبأة لم تُسلّم" value={s.cylinderStates.filled} tone={s.cylinderStates.filled ? "primary" : "neutral"} />
+          <Stat label="بدها تعبية" value={s.cylinderStates.empty} tone={s.cylinderStates.empty ? "warning" : "neutral"} />
+          <Stat label="جاهزة للتسليم" value={s.cylinderStates.filled} tone={s.cylinderStates.filled ? "primary" : "neutral"} />
           <Stat label="مسلّمة" value={s.cylinderStates.delivered} tone="success" />
         </div>
         <p className="mt-3 text-xs text-muted">إغلاق الدورة لا يلغي الجرار المعلقة: يمكن تعبئتها وتسليمها بعد الإغلاق، ولا تُستلم جرار جديدة فيها. الإغلاق لا يصفّر المستحقات؛ يبقى التحصيل ممكنًا.</p>
@@ -43,7 +43,7 @@ export default async function CyclePage({ params }: { params: Promise<{ id: stri
       <CycleActions cycle={{ id: c.id, status: c.status, unitPrice: c.unitPrice.toString() }} pendingStatements={s.pendingStatements} />
       <Card title="كشوف الدورة">
         {s.statements.length === 0 ? (
-          <EmptyState>لا توجد كشوف. <Link className="text-primary hover:underline" href="/d/statements">استيراد كشف</Link></EmptyState>
+          <EmptyState>ما في كشوفات لهذه الدورة. <Link className="text-primary hover:underline" href="/d/statements">ارفع كشف الهيئة</Link></EmptyState>
         ) : (
           <ul className="divide-y divide-border">
             {s.statements.map((st) => (

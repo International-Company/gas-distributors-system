@@ -10,10 +10,10 @@ import type { OpStatus, QueuedOp } from "@/lib/offline/logic";
 import { formatDateTime, formatMoney, isolate } from "@/lib/format";
 
 const STATUS: Record<OpStatus, { label: string; tone: "neutral" | "warning" | "success" | "danger" }> = {
-  local: { label: "محلية", tone: "neutral" },
-  pending: { label: "بانتظار المزامنة", tone: "warning" },
-  synced: { label: "متزامنة", tone: "success" },
-  review: { label: "تحتاج مراجعة", tone: "danger" },
+  local: { label: "على الجهاز", tone: "neutral" },
+  pending: { label: "بانتظار الإرسال", tone: "warning" },
+  synced: { label: "وصلت", tone: "success" },
+  review: { label: "بدها مراجعة", tone: "danger" },
 };
 
 function describe(op: QueuedOp) {
@@ -52,7 +52,7 @@ export function SyncCenter() {
         </Alert>
       )}
       {foreign > 0 && (
-        <Alert tone="warning">على هذا الجهاز {foreign} عملية غير متزامنة لحساب آخر. لا تظهر هنا، وتُرسل عند دخول صاحبها من هذا الجهاز.</Alert>
+        <Alert tone="warning">على هذا الجهاز {foreign} عملية لم تُرسل بعد لحساب آخر. لا تظهر هنا، وتُرسل عند دخول صاحبها من هذا الجهاز.</Alert>
       )}
       {msg && <Alert tone="success">{msg}</Alert>}
 
@@ -71,13 +71,13 @@ export function SyncCenter() {
                   setMsg(
                     r.offline ? "لا يوجد اتصال؛ ستُعاد المحاولة تلقائيًا."
                       : r.authNeeded ? ""
-                      : r.synced || r.review ? `تمت المزامنة: ${r.synced} متزامنة${r.review ? `، ${r.review} تحتاج مراجعة` : ""}.`
-                      : "لا توجد عمليات بانتظار المزامنة.",
+                      : r.synced || r.review ? `تم الإرسال: ${r.synced} وصلت${r.review ? `، ${r.review} بدها مراجعة` : ""}.`
+                      : "لا توجد عمليات بانتظار الإرسال.",
                   );
                 }
               }}
             >
-              <RefreshCw className="size-4" /> مزامنة الآن
+              <RefreshCw className="size-4" /> إرسال الآن
             </Button>
             <Button size="sm" variant="secondary" onClick={async () => { setMsg(""); await o.refresh(); setMsg("حُدّثت بيانات الجهاز."); }}>
               <Download className="size-4" /> تحديث بيانات الجهاز
@@ -88,8 +88,8 @@ export function SyncCenter() {
         <DetailList
           items={[
             ["الاتصال", o.online ? "متصل" : "دون اتصال"],
-            ["بانتظار المزامنة", String(o.unsynced)],
-            ["تحتاج مراجعة", String(o.review)],
+            ["بانتظار الإرسال", String(o.unsynced)],
+            ["بدها مراجعة", String(o.review)],
             ["بيانات الجهاز للعمل دون اتصال", snap ? <span key="s">{snap.snapshot.citizens.length} مواطنًا · آخر تحديث <bdi dir="ltr">{formatDateTime(snap.fetchedAt)}</bdi></span> : "غير موجودة (تُنزّل تلقائيًا عند الاتصال)"],
             ["المسموح دون اتصال", policy ? [policy.receive && "استلام الفارغ", policy.deliver && "التسليم", policy.payments && "التحصيل"].filter(Boolean).join("، ") || "لا شيء" : "—"],
             ["صلاحية بيانات الجهاز", policy ? `${policy.maxAgeHours} ساعة من آخر تحديث، ثم تُحذف` : "—"],
@@ -107,7 +107,7 @@ export function SyncCenter() {
         }
       >
         {shown.length === 0 ? (
-          <EmptyState>{filter === "open" ? "لا توجد عمليات معلقة." : "لا توجد عمليات."}</EmptyState>
+          <EmptyState>{filter === "open" ? "كل العمليات وصلت للخادم، ما في شي معلّق." : "ما في عمليات على هذا الجهاز."}</EmptyState>
         ) : (
           <ul className="divide-y divide-border">
             {shown.map((op) => (
@@ -151,9 +151,9 @@ export function SyncCenter() {
         <ul className="list-disc space-y-1 ps-5 text-sm text-muted">
           <li>التوزيع فقط: البحث برقم الهوية، واستلام الفارغ، والتسليم، والتحصيل، حسب ما يسمح به مدير النظام.</li>
           <li>كل عملية تحمل معرّفًا فريدًا؛ إعادة إرسالها لا تكرر أثرها، والجهاز لا يكرر استلامًا أو تسليمًا أو تحصيلًا ينتظر المزامنة.</li>
-          <li>الخادم يعيد التحقق من كل عملية. ما يرفضه (مثل جرة سُلّمت من جهاز آخر) يصبح «تحتاج مراجعة» ولا يُحسم تلقائيًا.</li>
+          <li>الخادم يعيد التحقق من كل عملية. ما يرفضه (مثل جرة سُلّمت من جهاز آخر) يصبح «بدها مراجعة» ولا يُحسم تلقائيًا.</li>
           <li>تتطلب اتصالًا دائمًا: الكشوفات، والتعبئة ونقلات المحطة، وإلغاء العمليات، والمصاريف، والتقارير، والإعدادات.</li>
-          <li>بيانات الجهاز مشفّرة، وتُحذف عند الخروج أو بعد انتهاء صلاحيتها. العمليات غير المتزامنة تبقى حتى تُرسل.</li>
+          <li>بيانات الجهاز مشفّرة، وتُحذف عند الخروج أو بعد انتهاء صلاحيتها. العمليات اللي ما وصلت تبقى حتى تُرسل.</li>
         </ul>
       </Card>
     </div>

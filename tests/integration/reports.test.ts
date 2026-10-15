@@ -69,29 +69,25 @@ describe("تقارير الموزّع", () => {
     expect(r.totals!.remaining).toBe("50.00");
   });
 
-  it("الجرار الفارغة والمعبأة غير المسلّمة", async () => {
-    const { actor } = await scenario();
-    expect((await runReport(actor, "empty-not-filled", {})).rows).toHaveLength(0);
-    expect((await runReport(actor, "filled-not-delivered", {})).rows.map((x) => x.label)).toEqual(["2-1"]);
+  it("ستة تقارير أساسية فقط", () => {
+    expect(listReports().map((r) => r.key)).toEqual(["citizens-sheet", "not-delivered", "unpaid", "cash-box", "stations", "movements"]);
   });
 
-  it("عمليات الفترة: الأعداد صحيحة، وفترة في الماضي فارغة، والتاريخ غير الصالح مرفوض", async () => {
-    const { actor } = await scenario();
+  it("حركة الجرار: الأعداد والأسماء والرصيد بعد كل حركة، وفترة في الماضي فارغة، والتاريخ غير الصالح مرفوض", async () => {
+    const { actor, rows } = await scenario();
     const today = new Date().toISOString().slice(0, 10);
-    const r = await runReport(actor, "operations-period", { from: "2020-01-01", to: "2099-12-31" });
+    const r = await runReport(actor, "movements", { from: "2020-01-01", to: "2099-12-31" });
     expect(r.summary!.map((s) => s.value)).toEqual([2, 2, 1]);
-    expect((await runReport(actor, "operations-period", { from: "2020-01-01", to: "2020-12-31" })).rows).toHaveLength(0);
-    expect((await runReport(actor, "operations-period", { type: "DELIVER", from: "2020-01-01", to: today.slice(0, 4) + "-12-31" })).rows).toHaveLength(1);
-    await expect(runReport(actor, "operations-period", { from: "أمس" })).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(r.rows.find((x) => x.type === "تسليم")).toMatchObject({ name: rows[0].name, after: "0 / 1 / 0" });
+    expect((await runReport(actor, "movements", { from: "2020-01-01", to: "2020-12-31" })).rows).toHaveLength(0);
+    expect((await runReport(actor, "movements", { type: "DELIVER", from: "2020-01-01", to: today.slice(0, 4) + "-12-31" })).rows).toHaveLength(1);
+    await expect(runReport(actor, "movements", { from: "أمس" })).rejects.toMatchObject({ code: "VALIDATION" });
   });
 
-  it("مقارنة الدورات والصندوق والتحصيلات", async () => {
+  it("الفلوس: المقبوض ناقص المصاريف", async () => {
     const { actor } = await scenario();
-    const cmp = await runReport(actor, "cycles-comparison", {});
-    expect(cmp.rows[0]).toMatchObject({ citizens: 3, cylinders: 4, delivered: 1, due: "80.00", collected: "30.00" });
     const box = await runReport(actor, "cash-box", {});
     expect(box.totals!.amount).toBe("25.00");
-    expect((await runReport(actor, "collections", {})).totals!.amount).toBe("30.00");
   });
 
   it("Excel من اليمين لليسار برأس وإجماليات وأرقام مال", async () => {

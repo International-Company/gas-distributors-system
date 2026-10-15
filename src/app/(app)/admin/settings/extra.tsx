@@ -63,6 +63,8 @@ export function NavEditor({ rows, overrides }: { rows: NavRow[]; overrides: Reco
     () => {
       const clean = Object.fromEntries(
         Object.entries(v)
+          // تخصيصات أقسام أُزيلت أو دُمجت لا تُرسل.
+          .filter(([k]) => rows.some((r) => r.href === k))
           .map(([k, o]) => [k, { ...(o.label ? { label: o.label } : {}), ...(o.order !== undefined && !Number.isNaN(o.order) ? { order: o.order } : {}), ...(o.hidden ? { hidden: true } : {}) }])
           .filter(([, o]) => Object.keys(o as object).length),
       );

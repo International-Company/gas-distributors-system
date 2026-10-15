@@ -53,7 +53,7 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
 
       <Card title="الاستحقاقات حسب الدورة">
         {p.entitlements.length === 0 ? (
-          <EmptyState>لا توجد استحقاقات.</EmptyState>
+          <EmptyState>ما له استحقاق في الكشوفات المعتمدة.</EmptyState>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1000px] text-sm">
@@ -110,7 +110,7 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
 
       <Card title="المقبوض">
         {p.entitlements.every((e) => e.payments.length === 0) ? (
-          <EmptyState>لا توجد تحصيلات.</EmptyState>
+          <EmptyState>ما دفع شي بعد. القبض يتم من «التوزيع».</EmptyState>
         ) : (
           <ul className="divide-y divide-border text-sm">
             {p.entitlements.flatMap((e) => e.payments.map((pay) => ({ pay, cycle: e.cycle.name }))).sort((a, b) => b.pay.paidAt.getTime() - a.pay.paidAt.getTime()).map(({ pay, cycle }) => (
@@ -129,7 +129,7 @@ export default async function CitizenPage({ params }: { params: Promise<{ id: st
 
       <Card title="السجل الزمني">
         {p.timeline.length === 0 ? (
-          <EmptyState>لا توجد أحداث.</EmptyState>
+          <EmptyState>ما في أحداث.</EmptyState>
         ) : (
           <ul className="divide-y divide-border text-sm">
             {p.timeline.map((t, i) => (

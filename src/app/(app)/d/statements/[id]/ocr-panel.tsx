@@ -42,7 +42,7 @@ export function OcrPanel({ statementId }: { statementId: string }) {
       <div className="space-y-3">
         <p className="text-sm text-muted">
           الملف ممسوح ضوئيًا ولا يحتوي نصًا. تجري القراءة الضوئية على هذا الجهاز وقد تستغرق عدة دقائق حسب عدد الصفحات.
-          النتيجة تحتاج مراجعة دقيقة لكل صف مقابل الملف الأصلي.
+          النتيجة بدها مراجعة دقيقة لكل صف مقابل الملف الأصلي.
         </p>
         {error && <Alert tone="danger">{error} — يمكنك إعادة المحاولة، أو طلب نسخة Excel أو PDF نصية من الهيئة.</Alert>}
         {busy && (

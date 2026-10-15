@@ -106,7 +106,7 @@ export async function closeCycle(actor: Actor, cycleId: string, input: unknown) 
     const cycle = await lockCycle(tx, cycleId);
     if (cycle.status !== "OPEN") throw new AppError("INVALID_STATE", "الدورة مغلقة بالفعل");
     const pending = await tx.statement.count({ where: { cycleId, status: "PENDING_REVIEW" } });
-    if (pending) throw new AppError("INVALID_STATE", `في الدورة ${pending} كشف قيد المراجعة. اعتمده أو ألغه قبل الإغلاق`);
+    if (pending) throw new AppError("INVALID_STATE", `في الدورة ${pending} كشف بانتظار الاعتماد. اعتمده أو ألغه قبل الإغلاق`);
     const now = new Date();
     const after = await tx.cycle.update({ where: { id: cycleId }, data: { status: "CLOSED", closedAt: now, closedById: actor.userId } });
     await tx.cycleEvent.create({ data: { distributorId: actor.distributorId, cycleId, type: "CLOSED", userId: actor.userId } });

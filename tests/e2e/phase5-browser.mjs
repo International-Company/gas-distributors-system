@@ -77,7 +77,7 @@ await page.goto(BASE + "/d/statements");
 await page.setInputFiles("#u-file", xlsx);
 await page.click("text=رفع واستخراج البيانات");
 await page.waitForURL(/\/d\/statements\/[0-9a-f-]+$/, { timeout: 30000 });
-check("عمود «المتسلسل» رُبط برقم المواطن", (await body()).includes("رقم المواطن في الكشف"));
+check("الأعمدة رُبطت تلقائيًا (لوحة الربط مخفية، ورابط تعديلها متاح)", (await body()).includes("عدّل ربط الأعمدة") && !(await body()).includes("ربط أعمدة الملف بالحقول"));
 await page.getByText("راجعت بيانات الكشف").click();
 await page.getByRole("button", { name: "اعتماد الكشف" }).click();
 await page.getByText("معتمد", { exact: true }).first().waitFor({ timeout: 30000 });
@@ -96,7 +96,7 @@ await dcall("POST", "/api/v1/payments", { clientOpId: crypto.randomUUID(), entit
 
 // قائمة التقارير
 await page.goto(BASE + "/d/reports");
-check("قائمة التقارير", (await body()).includes("كشف المواطنين للدورة") && (await body()).includes("مقارنة الدورات"));
+check("قائمة التقارير الستة", (await body()).includes("كشف الناس للدورة") && (await body()).includes("حركة الجرار") && !(await body()).includes("مقارنة الدورات"));
 await page.goto(BASE + "/d/reports/unpaid");
 const unpaid = await body();
 check("تقرير غير المسددين: 15 + 25 = 40", unpaid.includes("15.00") && unpaid.includes("40.00"));
@@ -117,7 +117,7 @@ check("كشف المواطنين مصفّى (لم تُستلم)", (await body())
 const [printPage] = await Promise.all([ctx.waitForEvent("page"), page.getByRole("link", { name: /طباعة/ }).click()]);
 await printPage.waitForLoadState("networkidle");
 const pb = await body(printPage);
-check("صفحة الطباعة: العنوان والجدول بالعربية", pb.includes("كشف المواطنين") && pb.includes("مواطن أول للتقرير") && pb.includes("ملاحظات / توقيع"));
+check("صفحة الطباعة: العنوان والجدول بالعربية", pb.includes("كشف الناس") && pb.includes("مواطن أول للتقرير") && pb.includes("ملاحظات / توقيع"));
 await printPage.pdf?.({ path: `${OUT}/citizens-sheet.pdf`, format: "A4" }).catch(() => {});
 await printPage.screenshot({ path: `${OUT}/p5-02-print.png`, fullPage: true });
 await printPage.close();

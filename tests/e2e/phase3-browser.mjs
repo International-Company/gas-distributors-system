@@ -148,9 +148,9 @@ check("تسليم الجرة بعد مطابقة الرقم", true);
 await page.screenshot({ path: `${OUT}/p3-04-delivered.png`, fullPage: true });
 
 // المخزون ومطابقته: فارغ 1 (503)، معبأ 2 (501-2، 502)، إضافي 2
-await page.goto(BASE + "/d/inventory");
+await page.goto(BASE + "/d/cylinders");
 const inv = await page.textContent("body");
-check("الرصيد مطابق لحالات الجرار", inv.includes("الرصيد مطابق لحالات الجرار"));
+check("الرصيد مطابق لحالات الجرار (لا تنبيه خلل)، والإضافي ظاهر في صفحة الجرار", !inv.includes("لا يطابق حالات الجرار") && inv.includes("جرار إضافية من النقلات"));
 await page.screenshot({ path: `${OUT}/p3-05-inventory.png`, fullPage: true });
 
 // إلغاء التسليم من صفحة الجرة
@@ -161,8 +161,10 @@ await page.fill("#op-reason", "تسليم سُجل بالخطأ");
 await page.getByRole("button", { name: "تأكيد الإلغاء" }).click();
 await page.waitForSelector("text=ملغاة");
 check("إلغاء التسليم وظهوره في السجل", (await page.textContent("body")).includes("تسليم سُجل بالخطأ"));
+await page.goto(BASE + "/d/cylinders");
+check("المخزون مطابق بعد الإلغاء", !(await page.textContent("body")).includes("لا يطابق حالات الجرار"));
 await page.goto(BASE + "/d/inventory");
-check("المخزون مطابق بعد الإلغاء", (await page.textContent("body")).includes("الرصيد مطابق لحالات الجرار"));
+check("رابط المخزن القديم يحوّل لصفحة الجرار", page.url().endsWith("/d/cylinders"));
 
 // لوحة الموزّع
 await page.goto(BASE + "/d");

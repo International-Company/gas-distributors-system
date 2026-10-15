@@ -35,7 +35,7 @@ export default async function ShipmentPage({ params }: { params: Promise<{ id: s
       </Card>
       <Card title="جرار المواطنين المعبأة ضمن النقلة">
         {s.fills.length === 0 ? (
-          <EmptyState>لا توجد.</EmptyState>
+          <EmptyState>ما في جرار ناس بهذه النقلة؛ كل جرارها إضافية.</EmptyState>
         ) : (
           <ul className="divide-y divide-border text-sm">
             {s.fills.map((f) => (

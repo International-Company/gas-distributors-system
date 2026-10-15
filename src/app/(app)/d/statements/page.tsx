@@ -5,6 +5,7 @@ import { Card, EmptyState, PageHeader, buttonClass, cn } from "@/components/ui";
 import { STATEMENT_STATUS, StatementStatusBadge } from "@/components/statement-status";
 import { formatDateTime } from "@/lib/format";
 import { UploadForm } from "./upload-form";
+import { STATEMENT_STEPS, Steps } from "@/components/steps";
 
 export const metadata = { title: "الكشوفات" };
 
@@ -16,7 +17,8 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
   return (
     <div className="space-y-6">
       <PageHeader title="الكشوفات" />
-      <Card title="استيراد كشف">
+      <Steps steps={STATEMENT_STEPS} current={0} />
+      <Card title="ارفع كشف الهيئة (PDF أو Excel)">
         <UploadForm approved={approved.map((s) => ({ id: s.id, title: s.title, version: s.version, cycleName: s.cycle?.name ?? "" }))} />
       </Card>
       <div className="flex flex-wrap gap-2">
@@ -27,7 +29,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         ))}
       </div>
       {list.length === 0 ? (
-        <EmptyState>لا توجد كشوف.</EmptyState>
+        <EmptyState>{status ? "ما في كشوفات بهذه الحالة." : "ما في كشوفات بعد. ارفع أول كشف من الهيئة من النموذج أعلاه، وبعدها راجعه واعتمده."}</EmptyState>
       ) : (
         <ul className="space-y-2">
           {list.map((s) => (

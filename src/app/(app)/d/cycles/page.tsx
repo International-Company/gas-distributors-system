@@ -21,7 +21,7 @@ export default async function CyclesPage() {
         </Card>
       )}
       {cycles.length === 0 ? (
-        <EmptyState>لا توجد دورات بعد.</EmptyState>
+        <EmptyState>ما في دورات بعد. ابدأ أول دورة من النموذج أعلاه بسعر الجرة المحدد من الهيئة، وبعدها ارفع كشوفاتها.</EmptyState>
       ) : (
         <ul className="space-y-2">
           {cycles.map((c) => (

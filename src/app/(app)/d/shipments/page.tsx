@@ -27,7 +27,7 @@ export default async function ShipmentsPage({ searchParams }: { searchParams: Pr
       />
       <Card title="النقلات المستلمة">
         {data.rows.length === 0 ? (
-          <EmptyState>لا توجد نقلات.</EmptyState>
+          <EmptyState>ما في نقلات بعد. لما توصلك جرار معبأة من المحطة، سجّلها من زر «تسجيل نقلة مستلمة» أعلاه.</EmptyState>
         ) : (
           <ul className="divide-y divide-border">
             {data.rows.map((s) => (

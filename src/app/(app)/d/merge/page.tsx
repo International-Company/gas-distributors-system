@@ -15,7 +15,7 @@ export default async function MergePage() {
         title="أسماء مكررة"
       />
       {pairs.length === 0 ? (
-        <EmptyState>لا توجد اقتراحات.</EmptyState>
+        <EmptyState>ما في أسماء مكررة. النظام بيعرض هون الأسماء المتشابهة جدًا بأرقام هوية مختلفة لتقرر إن كانوا نفس الشخص.</EmptyState>
       ) : (
         pairs.map(({ a, b, score }) => (
           <Card key={`${a.id}-${b.id}`} title={`تشابه ${Math.round(score * 100)}%`}>

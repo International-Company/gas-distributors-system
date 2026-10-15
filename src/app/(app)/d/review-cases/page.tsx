@@ -23,7 +23,7 @@ export default async function ReviewCasesPage({ searchParams }: { searchParams: 
       />
       <NewCase initialOpen={sp.new === "1"} initial={{ nationalId: sp.nationalId ?? "", fullName: sp.fullName ?? "" }} />
       {cases.length === 0 ? (
-        <EmptyState>لا توجد حالات.</EmptyState>
+        <EmptyState>ما في مشاكل. لما يحضر شخص مش موجود بالكشف، أو يتعذر التحقق من هويته، أو ترفض عملية بدون نت، بتظهر هون.</EmptyState>
       ) : (
         <div className="space-y-2">
           {cases.map((c) => (

@@ -44,13 +44,13 @@ describe("القائمة الجانبية", () => {
     const { actor: dist } = await makeDistributor();
     await expect(updateNavOverrides(admin, { "/d": { hidden: true } })).rejects.toMatchObject({ code: "VALIDATION" });
     await expect(updateNavOverrides(admin, { "/unknown": { label: "x x" } })).rejects.toMatchObject({ code: "VALIDATION" });
-    await updateNavOverrides(admin, { "/d/sync": { label: "المزامنة والانقطاع", order: 0 }, "/d/merge": { hidden: true } });
+    await updateNavOverrides(admin, { "/d/stations": { label: "محطات التعبية", order: 0 }, "/d/merge": { hidden: true } });
     const s = await getPublicSettings();
     const nav = navFor(dist, s.navOverrides);
-    // الترتيب داخل المجموعة: المزامنة صارت أول «العمل اليومي» قبل الشباك، والمجموعات بترتيبها الثابت.
-    expect(nav.filter((n) => n.group === "work").map((n) => n.href)).toEqual(["/d/sync", "/d/counter"]);
+    // الترتيب داخل المجموعة: المحطات صارت أول «الجرار والمخزن»، والمجموعات بترتيبها الثابت.
+    expect(nav.filter((n) => n.group === "stock").map((n) => n.href)).toEqual(["/d/stations", "/d/cylinders", "/d/shipments"]);
     expect(nav[0].href).toBe("/d");
-    expect(nav.find((n) => n.href === "/d/sync")?.label).toBe("المزامنة والانقطاع");
+    expect(nav.find((n) => n.href === "/d/stations")?.label).toBe("محطات التعبية");
     expect(nav.some((n) => n.href === "/d/merge")).toBe(false);
     // الإخفاء تنظيمي فقط: الصفحة نفسها محمية بالصلاحيات لا بالقائمة.
     const { actor: limited } = await makeAdmin({ permissions: ["settings.manage"] });

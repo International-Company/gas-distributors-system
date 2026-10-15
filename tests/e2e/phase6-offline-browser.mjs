@@ -178,7 +178,7 @@ try {
   await page.getByRole("button", { name: "تأكيد التسليم" }).click();
   await page.getByText(/حُفظ تسليم الجرة/).waitFor();
   const afterA = await body();
-  check("التسليم محفوظ على الجهاز «بانتظار المزامنة» (لا نجاح قبل الخادم)", afterA.includes("بانتظار المزامنة") && !afterA.includes("سُلّمت الجرة 77-1."));
+  check("التسليم محفوظ على الجهاز «بانتظار الإرسال» (لا نجاح قبل الخادم)", afterA.includes("بانتظار الإرسال") && !afterA.includes("سُلّمت الجرة 77-1."));
   check("لا يمكن تسليم الجرة نفسها مرة ثانية من الجهاز", (await page.getByRole("button", { name: "تسليم" }).count()) === 0);
   await page.screenshot({ path: `${OUT}/p6-01-offline-deliver.png`, fullPage: true });
 
@@ -213,23 +213,23 @@ try {
   await page.getByText(/حُفظ تسليم الجرة/).waitFor();
 
   const pending = await page.locator("header").first().textContent();
-  check("المؤشر: 4 عمليات بانتظار المزامنة", strip(pending).includes("4 بانتظار المزامنة"));
+  check("المؤشر: 4 عمليات بانتظار الإرسال", strip(pending).includes("4 بانتظار الإرسال"));
   await page.goto(BASE + "/d/sync");
   await page.locator("[data-op-status]").nth(3).waitFor({ timeout: 10000 });
   const sp = await body();
-  check("قائمة المزامنة تفتح دون اتصال وتعرض العمليات وحالاتها", sp.includes("نُفذت دون اتصال") && (sp.includes("محلية") || sp.includes("بانتظار المزامنة")) && sp.includes("77-3"), JSON.stringify([sp.includes("نُفذت دون اتصال"), sp.includes("بانتظار المزامنة"), sp.includes("77-3")]));
+  check("قائمة المزامنة تفتح دون اتصال وتعرض العمليات وحالاتها", sp.includes("نُفذت دون اتصال") && (sp.includes("على الجهاز") || sp.includes("بانتظار الإرسال")) && sp.includes("77-3"), JSON.stringify([sp.includes("نُفذت دون اتصال"), sp.includes("بانتظار المزامنة"), sp.includes("77-3")]));
   await page.screenshot({ path: `${OUT}/p6-02-sync-offline.png`, fullPage: true });
 
   // ---------- عودة الاتصال ----------
   await startServer();
   await ctx.setOffline(false);
-  await page.getByRole("button", { name: "مزامنة الآن" }).click();
-  await page.waitForFunction(() => !document.querySelector("header")?.textContent?.includes("بانتظار المزامنة"), null, { timeout: 30000 });
+  await page.getByRole("button", { name: "إرسال الآن" }).click();
+  await page.waitForFunction(() => !document.querySelector("header")?.textContent?.includes("بانتظار الإرسال"), null, { timeout: 30000 });
   const after = strip(await page.locator("header").first().textContent());
-  check("بعد المزامنة: لا عمليات معلقة، وعملية واحدة تحتاج مراجعة", !after.includes("بانتظار المزامنة") && after.includes("1 تحتاج مراجعة"), after);
+  check("بعد المزامنة: لا عمليات معلقة، وعملية واحدة تحتاج مراجعة", !after.includes("بانتظار الإرسال") && after.includes("1 بدها مراجعة"), after);
   await page.getByRole("button", { name: "الكل" }).click();
   const all = await body();
-  check("ثلاث عمليات «متزامنة» وواحدة «تحتاج مراجعة» برسالة الخادم", (all.match(/متزامنة/g) ?? []).length >= 3 && all.includes("سُلّمت هذه الجرة سابقًا"));
+  check("ثلاث عمليات «وصلت» وواحدة «بدها مراجعة» برسالة الخادم", (all.match(/وصلت/g) ?? []).length >= 3 && all.includes("سُلّمت هذه الجرة سابقًا"));
   await page.screenshot({ path: `${OUT}/p6-03-after-sync.png`, fullPage: true });
 
   // التحقق من الخادم
@@ -247,7 +247,7 @@ try {
   // إخفاء بعد المعالجة، ثم الخروج يحذف بيانات الجهاز
   await page.goto(BASE + "/d/sync");
   await page.getByRole("button", { name: "عولجت — إخفاء" }).click();
-  await page.waitForFunction(() => !document.querySelector("header")?.textContent?.includes("تحتاج مراجعة"), null, { timeout: 10000 });
+  await page.waitForFunction(() => !document.querySelector("header")?.textContent?.includes("بدها مراجعة"), null, { timeout: 10000 });
   check("إخفاء العملية المعالجة", true);
 
   const m = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, storageState: await ctx.storageState() });

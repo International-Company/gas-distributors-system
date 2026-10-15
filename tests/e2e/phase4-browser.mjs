@@ -131,18 +131,18 @@ check("المتبقي للمحطة 15.00 بعد الدفعة وكشف الحسا
 await page.screenshot({ path: `${OUT}/p4-02-station-account.png`, fullPage: true });
 
 // مصروف ثم الصندوق
-await page.goto(BASE + "/d/expenses");
+await page.goto(BASE + "/d/finance?tab=expenses");
 await page.fill("#ex-amount", "5");
 await page.fill("#ex-desc", "نقل الجرار");
 await page.getByRole("button", { name: "تسجيل", exact: true }).click();
 await page.waitForSelector("text=نقل الجرار");
 await page.goto(BASE + "/d/finance");
 const box = await body();
-check("الصندوق: 40 مقبوضات، 5 مصروفات، 30 محطات، رصيد 5", box.includes("40.00") && box.includes("5.00") && box.includes("30.00") && box.includes("لا يثبت مقدار النقد"));
+check("الصندوق: 40 مقبوضات، 5 مصروفات، 30 محطات، رصيد 5", box.includes("40.00") && box.includes("5.00") && box.includes("30.00") && box.includes("لا يثبت كم في الغلّة"));
 await page.screenshot({ path: `${OUT}/p4-03-cashbox.png`, fullPage: true });
 
 // إلغاء المصروف
-await page.goto(BASE + "/d/expenses");
+await page.goto(BASE + "/d/finance?tab=expenses");
 await page.getByRole("button", { name: "إلغاء" }).first().click();
 await page.fill("#cr-reason", "سُجل بالخطأ");
 await page.getByRole("button", { name: "تأكيد الإلغاء" }).click();
@@ -151,7 +151,7 @@ await page.goto(BASE + "/d/finance");
 check("بعد إلغاء المصروف: الرصيد 10.00", (await body()).includes("10.00"));
 
 // ملف المواطن
-await page.goto(BASE + "/d/collections");
+await page.goto(BASE + "/d/finance?tab=collections");
 await page.getByRole("link", { name: person.name }).first().click();
 await page.waitForURL(/\/d\/citizens\/[0-9a-f-]+$/);
 const prof = await body();

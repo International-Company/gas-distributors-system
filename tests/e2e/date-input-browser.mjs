@@ -126,7 +126,7 @@ await dp.fill("#cp-new", "Mine-5678");
 await dp.fill("#cp-confirm", "Mine-5678");
 await dp.click("button[type=submit]");
 await dp.waitForURL("**/d");
-await dp.goto(BASE + "/d/expenses");
+await dp.goto(BASE + "/d/finance?tab=expenses");
 await dp.fill("#ex-amount", "12");
 await dp.fill("#ex-desc", "مصروف اختبار التاريخ");
 await dp.locator("#ex-at").click();
@@ -154,7 +154,7 @@ check("المصروف محفوظ بالوقت الصحيح (15:30)", list.includ
 // ---------- الهاتف والوضع الداكن ----------
 const m = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: "dark", storageState: await dctx.storageState() });
 const mp = await m.newPage();
-await mp.goto(BASE + "/d/expenses");
+await mp.goto(BASE + "/d/finance?tab=expenses");
 await mp.locator("#ex-at").scrollIntoViewIfNeeded();
 await mp.locator("#ex-at").tap();
 const sheet = mp.getByRole("dialog");

@@ -167,18 +167,18 @@ export function OfflineIndicator() {
   return (
     <div className="flex items-center gap-1.5">
       {!o.online && (
-        <span className={`${chip} bg-danger-soft text-danger`} role="status">
+        <Link href="/d/sync" className={`${chip} bg-danger-soft text-danger`} role="status">
           <CloudOff className="size-3.5" /> دون اتصال
-        </span>
+        </Link>
       )}
       {o.unsynced > 0 && (
         <Link href="/d/sync" className={`${chip} bg-warning-soft text-warning`}>
-          <RefreshCw className={`size-3.5 ${o.syncing ? "animate-spin" : ""}`} /> {o.unsynced} بانتظار المزامنة
+          <RefreshCw className={`size-3.5 ${o.syncing ? "animate-spin" : ""}`} /> {o.unsynced} بانتظار الإرسال
         </Link>
       )}
       {o.review > 0 && (
         <Link href="/d/sync" className={`${chip} bg-danger-soft text-danger`}>
-          <TriangleAlert className="size-3.5" /> {o.review} تحتاج مراجعة
+          <TriangleAlert className="size-3.5" /> {o.review} بدها مراجعة
         </Link>
       )}
       {o.installPrompt && (

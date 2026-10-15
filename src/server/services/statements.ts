@@ -38,7 +38,7 @@ async function lockStatement(tx: Tx, id: string) {
 }
 
 function assertPending(st: Statement) {
-  if (st.status !== "PENDING_REVIEW") throw new AppError("INVALID_STATE", "لا يمكن تعديل كشف ليس قيد المراجعة");
+  if (st.status !== "PENDING_REVIEW") throw new AppError("INVALID_STATE", "لا يمكن تعديل كشف ليس بانتظار الاعتماد");
 }
 
 const effectiveAmount = (row: { amount: Prisma.Decimal | null; quantity: number | null }, unitPrice: Prisma.Decimal) =>

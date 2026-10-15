@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { requirePageActor } from "@/server/http/context";
 import { getStatement } from "@/server/services/statements";
-import { FIELD_LABELS } from "@/server/statements/mapping";
+import { FIELD_LABELS, REQUIRED_FIELDS } from "@/server/statements/mapping";
 import { Alert, Badge, Card, DetailList, EmptyState, PageHeader, buttonClass, cn } from "@/components/ui";
 import { StatementStatusBadge } from "@/components/statement-status";
 import { Pagination } from "@/components/pagination";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { ApprovePanel, MappingPanel, MetaPanel, RowActions } from "./review";
 import { OcrPanel } from "./ocr-panel";
+import { STATEMENT_STEPS, Steps } from "@/components/steps";
 
 export const metadata = { title: "مراجعة كشف" };
 
@@ -48,6 +49,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
           </span>
         }
       />
+      {(pending || st.status === "APPROVED") && <Steps steps={STATEMENT_STEPS} current={pending ? 1 : 3} />}
 
       <Card title="الملف">
         <DetailList
@@ -91,6 +93,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
           headerRow={st.headerRow}
           mapping={(st.columnMapping ?? {}) as Record<string, number | null>}
           labels={FIELD_LABELS}
+          needsAttention={REQUIRED_FIELDS.some((f) => ((st.columnMapping ?? {}) as Record<string, number | null>)[f] == null)}
         />
       )}
 
@@ -127,7 +130,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
           <button className={buttonClass("secondary", "sm", "h-9")}>بحث</button>
         </form>
         {data.rows.length === 0 ? (
-          <EmptyState>لا توجد صفوف.</EmptyState>
+          <EmptyState>ما في صفوف بهذا الفلتر.</EmptyState>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">

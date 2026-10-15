@@ -39,7 +39,7 @@ export function CycleActions({ cycle, pendingStatements }: { cycle: { id: string
             {run.error && <Alert tone="danger">{run.error}</Alert>}
             {kind === "close" && (
               <>
-                {pendingStatements > 0 && <Alert tone="warning">في الدورة {pendingStatements} كشف قيد المراجعة؛ اعتمده أو ألغه أولًا.</Alert>}
+                {pendingStatements > 0 && <Alert tone="warning">في الدورة {pendingStatements} كشف بانتظار الاعتماد؛ اعتمده أو ألغه أولًا.</Alert>}
                 <Alert>الإغلاق يمنع اعتماد كشوف جديدة واستلام جرار فارغة جديدة في هذه الدورة. الجرار المعلقة تبقى قابلة للتعبئة والتسليم. لا يصفّر الأرصدة ولا يعني سداد المستحقات، ويمكن إعادة الفتح بسبب مكتوب.</Alert>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" className="size-4" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} /> راجعت ملخص الدورة وأؤكد الإغلاق

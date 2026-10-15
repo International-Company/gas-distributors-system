@@ -34,28 +34,29 @@ const grp = (name) => aside.getByRole("button", { name });
 
 await dp.goto(BASE + "/d/cylinders"); await dp.waitForLoadState("networkidle");
 check("مجموعة الصفحة الحالية مفتوحة تلقائيًا", (await grp("الجرار والمخزن").getAttribute("aria-expanded")) === "true");
-check("المجموعات الأخرى مطوية افتراضيًا", (await grp("الفلوس").getAttribute("aria-expanded")) === "false" && (await grp("الناس والكشوفات").getAttribute("aria-expanded")) === "false");
-check("أقسام المجموعة المطوية خارج التنقل بلوحة المفاتيح (inert)", (await aside.locator("#nav-group-money").getAttribute("inert")) !== null);
-check("التقارير قسم مباشر دون عنوان مكرر", (await aside.getByText("التقارير", { exact: true }).count()) === 1);
+check("المجموعات الأخرى مطوية افتراضيًا", (await grp("الناس والكشوفات").getAttribute("aria-expanded")) === "false");
+check("أقسام المجموعة المطوية خارج التنقل بلوحة المفاتيح (inert)", (await aside.locator("#nav-group-records").getAttribute("inert")) !== null);
+check("التقارير والفلوس والتوزيع أقسام مباشرة دون عنوان مكرر", (await aside.getByText("التقارير", { exact: true }).count()) === 1 && (await aside.getByRole("link", { name: "الفلوس" }).count()) === 1 && (await aside.getByRole("link", { name: "التوزيع" }).count()) === 1);
+check("«شغل بدون نت» والمخزن والمقبوض والمصاريف خارج القائمة", (await aside.getByRole("link", { name: /^(شغل بدون نت|المخزن|المقبوض|المصاريف|الغلّة)$/ }).count()) === 0);
 check("القسم الحالي مميز (aria-current)", (await aside.locator("[aria-current=page]").textContent()).includes("الجرار"));
 await aside.screenshot({ path: `${OUT}/n-01-default.png` });
 
-await grp("الفلوس").click();
+await grp("الناس والكشوفات").click();
 await dp.waitForTimeout(300);
-check("فتح مجموعة بالنقر", (await grp("الفلوس").getAttribute("aria-expanded")) === "true" && await aside.getByRole("link", { name: "الغلّة" }).isVisible());
+check("فتح مجموعة بالنقر", (await grp("الناس والكشوفات").getAttribute("aria-expanded")) === "true" && await aside.getByRole("link", { name: "الكشوفات" }).isVisible());
 await aside.screenshot({ path: `${OUT}/n-02-opened.png` });
 await grp("الجرار والمخزن").click();
 await dp.waitForTimeout(300);
 check("طي مجموعة الصفحة الحالية يُظهر نقطة تدل عليها", (await grp("الجرار والمخزن").getAttribute("aria-expanded")) === "false");
 await dp.reload(); await dp.waitForLoadState("networkidle");
-check("حالة الطي محفوظة بعد إعادة التحميل", (await grp("الفلوس").getAttribute("aria-expanded")) === "true");
-await aside.getByRole("link", { name: "الغلّة" }).click();
+check("حالة الطي محفوظة بعد إعادة التحميل", (await grp("الناس والكشوفات").getAttribute("aria-expanded")) === "true");
+await aside.getByRole("link", { name: "الفلوس" }).click();
 await dp.waitForURL("**/d/finance");
 await dp.goto(BASE + "/d/cylinders"); await dp.waitForLoadState("networkidle");
 check("الانتقال لصفحة في مجموعة مطوية يفتحها", (await grp("الجرار والمخزن").getAttribute("aria-expanded")) === "true");
 
 const dd = await b.newContext({ viewport: { width: 1280, height: 760 }, colorScheme: "dark", storageState: await d.storageState() });
-const ddp = await dd.newPage(); await ddp.goto(BASE + "/d/collections"); await ddp.waitForLoadState("networkidle");
+const ddp = await dd.newPage(); await ddp.goto(BASE + "/d/finance?tab=collections"); await ddp.waitForLoadState("networkidle");
 await ddp.evaluate(() => { document.documentElement.classList.remove("light"); document.documentElement.classList.add("dark"); });
 await ddp.locator("aside").first().screenshot({ path: `${OUT}/n-03-dark.png` });
 

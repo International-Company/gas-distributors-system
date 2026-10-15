@@ -89,8 +89,12 @@ export function MetaPanel({
 // ربط الأعمدة
 // ---------------------------------------------------------------------------
 
+/**
+ * ربط الأعمدة: مخفي ما دام التعرف التلقائي نجح (رابط صغير لفتحه إن ظهرت القيم في غير مكانها)،
+ * ويظهر مفتوحًا للتعديل إن تعذر تحديد عمود أساسي.
+ */
 export function MappingPanel({
-  statementId, preview, columns, headerRow, mapping, labels,
+  statementId, preview, columns, headerRow, mapping, labels, needsAttention,
 }: {
   statementId: string;
   preview: string[][];
@@ -98,10 +102,12 @@ export function MappingPanel({
   headerRow: number | null;
   mapping: Record<string, number | null>;
   labels: Record<string, string>;
+  needsAttention: boolean;
 }) {
   const api = useApi();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [shown, setShown] = useState(needsAttention);
+  const [open, setOpen] = useState(needsAttention);
   const [hr, setHr] = useState<number | null>(headerRow);
   const [m, setM] = useState<Record<string, number | null>>(mapping);
   const { busy, error, submit } = useFormSubmit(
@@ -113,11 +119,19 @@ export function MappingPanel({
   );
   const colLabel = (c: number) => `العمود ${c + 1}`;
   const fieldOf = (c: number) => Object.entries(m).find(([, v]) => v === c)?.[0];
+  if (!shown) {
+    return (
+      <button type="button" onClick={() => { setShown(true); setOpen(true); }} className="text-sm text-primary hover:underline">
+        القيم ظاهرة بغير مكانها؟ عدّل ربط الأعمدة
+      </button>
+    );
+  }
   return (
     <Card
       title="ربط أعمدة الملف بالحقول"
-      actions={<Button size="sm" variant="secondary" onClick={() => setOpen(!open)}>{open ? "إخفاء" : "تعديل الربط"}</Button>}
+      actions={<Button size="sm" variant="secondary" onClick={() => (needsAttention ? setOpen(!open) : setShown(false))}>{needsAttention && !open ? "تعديل الربط" : "إخفاء"}</Button>}
     >
+      {needsAttention && <Alert tone="warning" className="mb-3">ما قدرنا نحدد كل الأعمدة تلقائيًا. اختر لكل حقل العمود المناسب ثم احفظ.</Alert>}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[600px] text-xs">
           <thead>

@@ -93,7 +93,7 @@ await page.click("text=رفع واستخراج البيانات");
 await page.waitForURL(/\/d\/statements\/[0-9a-f-]+$/, { timeout: 30000 });
 const stmtUrl = page.url();
 await page.waitForSelector("text=صفوف الكشف");
-check("الكشف قيد المراجعة", await page.getByText("قيد المراجعة").first().isVisible());
+check("الكشف بانتظار الاعتماد", await page.getByText("بانتظار الاعتماد").first().isVisible());
 check("الدورة المقترحة من الملف = 3", await page.getByText("الدورة 3").first().isVisible());
 check("صف الهوية الخاطئة معلّم", await page.getByText("رقم الهوية غير صالح").first().isVisible());
 await page.screenshot({ path: `${OUT}/p2-01-review.png`, fullPage: true });
