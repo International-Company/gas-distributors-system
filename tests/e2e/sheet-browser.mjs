@@ -211,7 +211,7 @@ try {
   await page.fill("#ex-amount", "30");
   await page.fill("#ex-desc", "دفعة للمحطة");
   await page.getByRole("button", { name: "تسجيل", exact: true }).click();
-  await page.waitForSelector("text=دفعة للمحطة");
+  await page.locator("dialog[open]").waitFor({ state: "detached" });
   await page.goto(BASE + "/d/finance");
   const fin = await body();
   check("الفلوس: المقبوض 35 والمصاريف 30 والرصيد 5", fin.includes("35.00") && fin.includes("30.00") && fin.includes("5.00") && !fin.includes("دفعات المحطات"));

@@ -138,7 +138,7 @@ check("لا تمرير أفقي عند فتح اللوحة", (await dp.evaluate(
 const day = shift(today, -2);
 if ((await td.locator(`[data-day="${ymd(day)}"]`).count()) === 0) await td.getByRole("button", { name: "الشهر السابق" }).click();
 await td.locator(`[data-day="${ymd(day)}"]`).click();
-check("مع الوقت: اختيار اليوم لا يغلق اللوحة", (await dp.getByRole("dialog").count()) === 1);
+check("مع الوقت: اختيار اليوم لا يغلق اللوحة", (await dp.getByRole("dialog", { name: "اختيار التاريخ والوقت" }).count()) === 1);
 await td.getByLabel("الساعة", { exact: true }).selectOption("3");
 await td.getByLabel("الدقيقة", { exact: true }).selectOption("30");
 await td.getByRole("button", { name: "م", exact: true }).click();
@@ -147,9 +147,12 @@ await td.getByRole("button", { name: "تم" }).click();
 const at = strip(await dp.locator("#ex-at").textContent());
 check("العرض بنظام 12 ساعة: 03:30 م", at.includes(`${pad(day.d)}/${pad(day.m)}/${day.y}`) && at.includes("03:30 م"), at);
 await dp.getByRole("button", { name: "تسجيل", exact: true }).click();
-await dp.getByText("مصروف اختبار التاريخ").first().waitFor();
-const list = strip(await dp.textContent("body"));
-check("المصروف محفوظ بالوقت الصحيح (15:30)", list.includes(`${pad(day.d)}/${pad(day.m)}/${day.y} 15:30`));
+await dp.locator("dialog[open]").waitFor({ state: "detached" });
+await dp.goto(BASE + "/d/finance?period=week");
+const row = dp.locator("li", { hasText: "مصروف اختبار التاريخ" });
+await row.waitFor();
+const group = strip(await dp.locator("div.rounded-xl", { has: row }).first().textContent());
+check("المصروف محفوظ باليوم والوقت الصحيحين (15:30)", group.includes(`${pad(day.d)}/${pad(day.m)}`) && strip(await row.textContent()).includes("15:30"), group.slice(0, 120));
 
 // ---------- الهاتف والوضع الداكن ----------
 const m = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: "dark", storageState: await dctx.storageState() });
@@ -157,7 +160,7 @@ const mp = await m.newPage();
 await mp.goto(BASE + "/d/finance?tab=expenses");
 await mp.locator("#ex-at").scrollIntoViewIfNeeded();
 await mp.locator("#ex-at").tap();
-const sheet = mp.getByRole("dialog");
+const sheet = mp.getByRole("dialog", { name: "اختيار التاريخ والوقت" });
 await sheet.waitFor();
 const box = await sheet.boundingBox();
 check("على الهاتف: لوحة سفلية داخل الشاشة", box.x >= 0 && box.x + box.width <= 390 + 1 && box.y + box.height <= 844 + 1, JSON.stringify(box));

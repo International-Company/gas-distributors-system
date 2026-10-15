@@ -49,7 +49,7 @@ export function SheetView() {
     params.get("approved") ? { tone: "success", text: "اعتُمد الكشف وصار جاهزًا: ابحث عن الشخص واضغط «سلّم» أو «دفع»." } : null,
   );
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(() => (FILTERS.some((f) => f.key === params.get("f")) ? (params.get("f") as Filter) : "all"));
   const [limit, setLimit] = useState(PAGE);
   const [deliverFor, setDeliverFor] = useState<SheetRow | null>(null);
   const [payFor, setPayFor] = useState<SheetRow | null>(null);

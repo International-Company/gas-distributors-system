@@ -133,23 +133,23 @@ await page.goto(BASE + "/d/finance?tab=expenses");
 await page.fill("#ex-amount", "5");
 await page.fill("#ex-desc", "نقل الجرار");
 await page.getByRole("button", { name: "تسجيل", exact: true }).click();
-await page.waitForSelector("text=نقل الجرار");
+await page.locator("dialog[open]").waitFor({ state: "detached" });
 await page.goto(BASE + "/d/finance");
+await page.waitForSelector("text=نقل الجرار");
 const box = await body();
-check("الصندوق: 40 مقبوضات، 5 مصروفات، 30 محطات، رصيد 5", box.includes("40.00") && box.includes("5.00") && box.includes("30.00") && box.includes("لا يثبت كم في الغلّة"));
+check("الفلوس: انقبض 40، انصرف 35 (مصروف 5 + محطة 30)، معك 5", box.includes("المفروض يكون معك الآن") && box.includes("40.00") && box.includes("35.00") && box.includes("5.00"));
 await page.screenshot({ path: `${OUT}/p4-03-cashbox.png`, fullPage: true });
 
 // إلغاء المصروف
-await page.goto(BASE + "/d/finance?tab=expenses");
-await page.getByRole("button", { name: "إلغاء" }).first().click();
+await page.locator("li", { hasText: "نقل الجرار" }).getByRole("button", { name: "إلغاء" }).click();
 await page.fill("#cr-reason", "سُجل بالخطأ");
 await page.getByRole("button", { name: "تأكيد الإلغاء" }).click();
-await page.waitForSelector("text=أُلغي: سُجل بالخطأ");
+await page.waitForSelector("text=نقل الجرار", { state: "detached" });
 await page.goto(BASE + "/d/finance");
 check("بعد إلغاء المصروف: الرصيد 10.00", (await body()).includes("10.00"));
 
 // ملف المواطن
-await page.goto(BASE + "/d/finance?tab=collections");
+await page.goto(BASE + "/d/finance");
 await page.getByRole("link", { name: person.name }).first().click();
 await page.waitForURL(/\/d\/citizens\/[0-9a-f-]+$/);
 const prof = await body();
