@@ -17,7 +17,7 @@ import { sha256Hex, storeFile } from "./files";
 import { getActiveCycle, lockCycle } from "./cycles";
 import { assertUploadAllowed } from "./settings";
 import { cylinderCounts } from "./operations";
-import { paidByEntitlement } from "./finance";
+import { moneySchema, paidByEntitlement } from "./finance";
 import { isolate } from "@/lib/format";
 
 // ---------------------------------------------------------------------------
@@ -43,6 +43,11 @@ function assertPending(st: Statement) {
 
 const effectiveAmount = (row: { amount: Prisma.Decimal | null; quantity: number | null }, unitPrice: Prisma.Decimal) =>
   row.amount ?? unitPrice.mul(row.quantity ?? 0);
+
+/** سعر الجرة المعتمد للكشف: سعر الكشف نفسه، وإلا سعر الدورة (للكشوف القديمة قبل إضافة السعر لكل كشف). */
+const priceOf = (st: { unitPrice: Prisma.Decimal | null; cycle: { unitPrice: Prisma.Decimal } | null }) => st.unitPrice ?? st.cycle?.unitPrice ?? null;
+
+const priceSchema = moneySchema.transform((v) => new Prisma.Decimal(v));
 
 async function replaceRows(tx: Tx, actor: DistributorActor, statementId: string, rows: ParsedRow[], scaleNumber: string | null) {
   await tx.statementRow.deleteMany({ where: { statementId } });
@@ -130,7 +135,8 @@ async function revalidate(tx: Tx, st: Statement & { cycle: { unitPrice: Prisma.D
         w.issues.push({ field: "quantity", code: "QTY_BELOW_RECEIVED", message: `عدد الجرار أقل من المستلم فعلًا (${p.received})`, severity: "ERROR" });
       }
     }
-    if (p && p.paid.gt(0) && r.quantity && st.cycle && effectiveAmount(r, st.cycle.unitPrice).lt(p.paid)) {
+    const price = priceOf(st);
+    if (p && p.paid.gt(0) && r.quantity && price && effectiveAmount(r, price).lt(p.paid)) {
       w.issues.push({ field: "amount", code: "AMOUNT_BELOW_PAID", message: `المبلغ الجديد أقل من المدفوع فعلًا (${p.paid.toFixed(2)})`, severity: "ERROR" });
     }
     const c = r.nationalId ? citizenByNid.get(r.nationalId) : undefined;
@@ -143,11 +149,11 @@ async function revalidate(tx: Tx, st: Statement & { cycle: { unitPrice: Prisma.D
     if (r.citizenNumber && others.some((o) => o.citizenNumber === r.citizenNumber && o.citizen.nationalId !== r.nationalId)) {
       w.issues.push({ field: "citizenNumber", code: "NUMBER_TAKEN", message: "رقم المواطن مستخدم لمواطن آخر في هذه الدورة", severity: "ERROR" });
     }
-    if (st.cycle && r.amount && r.quantity && !r.amount.equals(st.cycle.unitPrice.mul(r.quantity))) {
+    if (price && r.amount && r.quantity && !r.amount.equals(price.mul(r.quantity))) {
       w.issues.push({
         field: "amount",
         code: "AMOUNT_MISMATCH",
-        message: `المبلغ في الكشف (${r.amount}) يختلف عن عدد الجرار × سعر الدورة (${st.cycle.unitPrice.mul(r.quantity)}). سيُعتمد مبلغ الكشف`,
+        message: `المبلغ في الكشف (${r.amount}) يختلف عن عدد الجرار × سعر الجرة (${price.mul(r.quantity)}). سيُعتمد مبلغ الكشف`,
         severity: "WARNING",
       });
     }
@@ -177,6 +183,7 @@ async function duplicateFiles(tx: Tx, sha: string, exceptStatementId?: string) {
 
 const uploadMetaSchema = z.object({
   title: z.string().trim().max(150).optional(),
+  unitPrice: priceSchema.optional().or(z.literal("").transform(() => undefined)),
   supersedesId: z.string().uuid().optional().or(z.literal("").transform(() => undefined)),
 });
 
@@ -224,6 +231,8 @@ export async function uploadStatement(actor: Actor, file: { name: string; mime: 
         distributorId: actor.distributorId,
         title: m.title || autoTitle,
         scaleNumber,
+        // سعر الجرة: المُدخل عند الرفع، وإلا سعر الكشف السابق (عند التحديث)، وإلا سعر الدورة النشطة.
+        unitPrice: m.unitPrice ?? supersedes?.unitPrice ?? active?.unitPrice ?? null,
         cycleId: supersedes?.cycleId ?? active?.id ?? null,
         supersedesId: supersedes?.id ?? null,
         version: supersedes ? supersedes.version + 1 : 1,
@@ -366,6 +375,7 @@ const metaSchema = z.object({
   title: z.string().trim().min(1).max(150).optional(),
   cycleId: z.string().uuid().nullable().optional(),
   supersedesId: z.string().uuid().nullable().optional(),
+  unitPrice: priceSchema.optional(),
   scaleNumber: z.string().trim().regex(/^\d{1,6}$/, "رقم الميزان أرقام فقط").nullable().optional().or(z.literal("").transform(() => null)),
 });
 
@@ -378,6 +388,7 @@ export async function updateStatementMeta(actor: Actor, statementId: string, inp
     assertPending(st);
     const data: Prisma.StatementUncheckedUpdateInput = {};
     if (v.title) data.title = v.title;
+    if (v.unitPrice) data.unitPrice = v.unitPrice;
     if (v.supersedesId !== undefined) {
       if (v.supersedesId) {
         const prev = await tx.statement.findUnique({ where: { id: v.supersedesId } });
@@ -414,7 +425,7 @@ export async function updateStatementMeta(actor: Actor, statementId: string, inp
       }
     }
     await revalidate(tx, updated);
-    await log(tx, actor, "meta", st.id, { title: updated.title, cycleId: updated.cycleId, supersedesId: updated.supersedesId, scaleNumber: updated.scaleNumber }, { title: st.title, cycleId: st.cycleId, supersedesId: st.supersedesId, scaleNumber: st.scaleNumber });
+    await log(tx, actor, "meta", st.id, { title: updated.title, cycleId: updated.cycleId, supersedesId: updated.supersedesId, scaleNumber: updated.scaleNumber, unitPrice: updated.unitPrice?.toFixed(2) ?? null }, { title: st.title, cycleId: st.cycleId, supersedesId: st.supersedesId, scaleNumber: st.scaleNumber, unitPrice: st.unitPrice?.toFixed(2) ?? null });
     return updated;
   }, { timeout: 60_000 });
 }
@@ -444,7 +455,8 @@ export type StatementDiff = {
 };
 
 async function computeDiff(tx: Tx, st: Statement & { cycle: { unitPrice: Prisma.Decimal } | null }): Promise<StatementDiff | null> {
-  if (!st.supersedesId || !st.cycle) return null;
+  const price = priceOf(st);
+  if (!st.supersedesId || !st.cycle || !price) return null;
   const prev = await tx.entitlement.findMany({ where: { statementId: st.supersedesId, status: "ACTIVE" }, include: { citizen: true } });
   const rows = await tx.statementRow.findMany({ where: { statementId: st.id, excluded: false }, orderBy: { rowIndex: "asc" } });
   const prevByNid = new Map(prev.map((e) => [e.citizen.nationalId, e]));
@@ -453,7 +465,7 @@ async function computeDiff(tx: Tx, st: Statement & { cycle: { unitPrice: Prisma.
   for (const r of rows) {
     if (!r.nationalId) continue;
     seen.add(r.nationalId);
-    const amount = effectiveAmount(r, st.cycle.unitPrice);
+    const amount = effectiveAmount(r, price);
     const e = prevByNid.get(r.nationalId);
     if (!e) {
       diff.added.push({ nationalId: r.nationalId, fullName: r.fullName ?? "", citizenNumber: r.citizenNumber ?? "", quantity: r.quantity ?? 0, amount: amount.toString() });
@@ -491,7 +503,7 @@ export async function listStatements(actor: Actor, filters: unknown) {
     const list = await tx.statement.findMany({
       where: { status: f.status, cycleId: f.cycleId },
       orderBy: { importedAt: "desc" },
-      include: { cycle: { select: { id: true, name: true, status: true } }, file: { select: { originalName: true, size: true } } },
+      include: { cycle: { select: { id: true, name: true, status: true, unitPrice: true } }, file: { select: { originalName: true, size: true } } },
       take: 200,
     });
     const counts = await tx.statementRow.groupBy({ by: ["statementId", "severity"], where: { statementId: { in: list.map((s) => s.id) }, excluded: false }, _count: { _all: true } });
@@ -561,6 +573,7 @@ export async function approveStatement(actor: Actor, statementId: string, input:
     if (!st.cycleId || !st.cycle) throw new AppError("VALIDATION", "حدد الدورة قبل الاعتماد");
     const cycle = await lockCycle(tx, st.cycleId);
     if (cycle.status !== "OPEN") throw new AppError("INVALID_STATE", "لا يمكن اعتماد كشف في دورة مغلقة");
+    const price = st.unitPrice ?? cycle.unitPrice;
     let prev: Statement | null = null;
     if (st.supersedesId) {
       prev = await lockStatement(tx, st.supersedesId);
@@ -604,7 +617,7 @@ export async function approveStatement(actor: Actor, statementId: string, input:
     // أرقام المواطنين قد تتبادل بين الإصدارات؛ نحرر الأرقام المتغيرة أولًا لتجنب تعارض القيد الفريد المؤقت.
     const plans = rows.map((r) => {
       const citizenId = citizenIdOf.get(r.nationalId!)!;
-      const amountDue = effectiveAmount(r, cycle.unitPrice);
+      const amountDue = effectiveAmount(r, price);
       return { r, citizenId, amountDue, amountSource: r.amount ? ("AUTHORITY" as const) : ("COMPUTED" as const), existing: prevByCitizen.get(citizenId) };
     });
     for (const p of plans) {
@@ -629,11 +642,12 @@ export async function approveStatement(actor: Actor, statementId: string, input:
         quantity: p.r.quantity!,
         amountDue: p.amountDue,
         amountSource: p.amountSource,
+        unitPrice: price,
       };
       if (p.existing) {
         keep.add(p.existing.id);
-        const before = { citizenNumber: p.existing.citizenNumber, nameInStatement: p.existing.nameInStatement, phoneInStatement: p.existing.phoneInStatement, quantity: p.existing.quantity, amountDue: p.existing.amountDue.toFixed(2), amountSource: p.existing.amountSource };
-        const after = { ...fields, amountDue: p.amountDue.toFixed(2) };
+        const before = { citizenNumber: p.existing.citizenNumber, nameInStatement: p.existing.nameInStatement, phoneInStatement: p.existing.phoneInStatement, quantity: p.existing.quantity, amountDue: p.existing.amountDue.toFixed(2), amountSource: p.existing.amountSource, unitPrice: p.existing.unitPrice.toFixed(2) };
+        const after = { ...fields, amountDue: p.amountDue.toFixed(2), unitPrice: price.toFixed(2) };
         const changed = JSON.stringify(before) !== JSON.stringify(after);
         await tx.entitlement.update({ where: { id: p.existing.id }, data: { ...fields, statementId: st.id } });
         if (changed) {
@@ -644,7 +658,7 @@ export async function approveStatement(actor: Actor, statementId: string, input:
         await tx.entitlement.create({
           data: {
             distributorId: actor.distributorId, cycleId: cycle.id, citizenId: p.citizenId, statementId: st.id,
-            unitPrice: cycle.unitPrice, currencyCode: cycle.currencyCode, ...fields,
+            currencyCode: cycle.currencyCode, ...fields,
           },
         });
         stats.created++;
@@ -731,5 +745,38 @@ export async function withdrawStatement(actor: Actor, statementId: string, input
     await tx.statement.update({ where: { id: st.id }, data: { status: "DISCARDED", discardedAt: new Date(), discardedById: actor.userId, discardReason: reason } });
     await log(tx, actor, "withdraw", st.id, { status: "DISCARDED", removed: ids.length }, { status: "APPROVED" }, reason);
     return { removed: ids.length };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// سعر الجرة في الكشف
+// ---------------------------------------------------------------------------
+
+/** مجموع الجرار والمبلغ المطلوب في الكشف (الصفوف غير المستبعدة): مبلغ الكشف إن ورد، وإلا العدد × سعر الجرة. */
+export async function statementDue(actor: Actor, statementId: string) {
+  assertDistributor(actor);
+  return withTenant(actor.distributorId, async (tx) => {
+    const [r] = await tx.$queryRaw<{ cylinders: bigint | null; total: Prisma.Decimal | null; price: Prisma.Decimal | null }[]>`
+      SELECT sum(COALESCE(r."quantity", 0)) AS cylinders,
+        sum(COALESCE(r."amount", COALESCE(r."quantity", 0) * COALESCE(s."unitPrice", c."unitPrice", 0))) AS total,
+        COALESCE(s."unitPrice", c."unitPrice") AS price
+      FROM "statements" s
+      LEFT JOIN "cycles" c ON c."id" = s."cycleId"
+      LEFT JOIN "statement_rows" r ON r."statementId" = s."id" AND NOT r."excluded"
+      WHERE s."id" = ${statementId}::uuid
+      GROUP BY s."unitPrice", c."unitPrice"`;
+    if (!r) throw notFound("الكشف");
+    return { cylinders: Number(r.cylinders ?? 0), total: new Prisma.Decimal(r.total ?? 0).toFixed(2), price: r.price ? new Prisma.Decimal(r.price).toFixed(2) : null };
+  });
+}
+
+/** آخر سعر جرة استُخدم (لتعبئة حقل السعر عند رفع كشف جديد): آخر كشف غير ملغى، وإلا سعر الدورة النشطة. */
+export async function lastStatementPrice(actor: Actor) {
+  assertDistributor(actor);
+  return withTenant(actor.distributorId, async (tx) => {
+    const last = await tx.statement.findFirst({ where: { status: { not: "DISCARDED" }, unitPrice: { not: null } }, orderBy: { importedAt: "desc" }, select: { unitPrice: true } });
+    if (last?.unitPrice) return last.unitPrice.toFixed(2);
+    const active = await getActiveCycle(tx);
+    return active ? active.unitPrice.toFixed(2) : null;
   });
 }

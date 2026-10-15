@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { requirePageActor } from "@/server/http/context";
-import { listStatements, statementActivity } from "@/server/services/statements";
+import { lastStatementPrice, listStatements, statementActivity } from "@/server/services/statements";
 import { listCycles } from "@/server/services/cycles";
 import { getPublicSettings } from "@/server/services/settings";
 import { PageHeader, buttonClass } from "@/components/ui";
@@ -18,7 +18,7 @@ type Item = Awaited<ReturnType<typeof listStatements>>[number];
 export default async function StatementsPage({ searchParams }: { searchParams: Promise<{ replace?: string }> }) {
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
   const sp = await searchParams;
-  const [list, cycles, settings] = await Promise.all([listStatements(actor, {}), listCycles(actor), getPublicSettings()]);
+  const [list, cycles, settings, lastPrice] = await Promise.all([listStatements(actor, {}), listCycles(actor), getPublicSettings(), lastStatementPrice(actor)]);
   const open = cycles.find((c) => c.status === "OPEN");
   const pending = list.filter((s) => s.status === "PENDING_REVIEW");
   const approved = list.filter((s) => s.status === "APPROVED");
@@ -30,7 +30,9 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
     <div className="space-y-6">
       <PageHeader title="الكشوفات" />
       <UploadForm
-        activeCycle={open ? { name: open.name, unitPrice: open.unitPrice.toFixed(2), currencySymbol: settings.currencySymbol } : null}
+        activeCycleName={open?.name ?? null}
+        currencySymbol={settings.currencySymbol}
+        defaultPrice={(replacing?.unitPrice ?? replacing?.cycle?.unitPrice)?.toFixed(2) ?? lastPrice}
         replace={replacing ? { id: replacing.id, title: replacing.title } : null}
       />
 
@@ -40,6 +42,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
             <Row
               key={s.id}
               s={s}
+              currency={settings.currencySymbol}
               href={`/d/statements/${s.id}`}
               cta={
                 <>
@@ -58,6 +61,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
             <Row
               key={s.id}
               s={s}
+              currency={settings.currencySymbol}
               href={`/d/statements/${s.id}`}
               cta={
                 <>
@@ -77,7 +81,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
             <ChevronLeft className="size-4 transition-transform group-open:-rotate-90" />
           </summary>
           <ul className="divide-y divide-border border-t border-border">
-            {old.map((s) => <Row key={s.id} s={s} href={`/d/statements/${s.id}`} plain />)}
+            {old.map((s) => <Row key={s.id} s={s} currency={settings.currencySymbol} href={`/d/statements/${s.id}`} plain />)}
           </ul>
         </details>
       )}
@@ -94,8 +98,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Row({ s, href, cta, plain }: { s: Item; href: string; cta?: React.ReactNode; plain?: boolean }) {
+function Row({ s, href, cta, plain, currency }: { s: Item; href: string; cta?: React.ReactNode; plain?: boolean; currency: string }) {
   const people = s.rowsOk + s.rowsWarning + s.rowsError;
+  const price = s.unitPrice ?? s.cycle?.unitPrice ?? null;
   return (
     <li className="flex flex-wrap items-center gap-3 px-4 py-3">
       <Link href={href} className="min-w-0 flex-1 hover:underline">
@@ -106,6 +111,7 @@ function Row({ s, href, cta, plain }: { s: Item; href: string; cta?: React.React
         </div>
         <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted">
           <span>{people} شخص</span>
+          {price && <span>الجرة <bdi dir="ltr" className="font-semibold text-text">{price.toFixed(2)} {currency}</bdi></span>}
           {s.rowsError > 0 && <span className="text-danger">{s.rowsError} فيها أخطاء</span>}
           {s.rowsWarning > 0 && <span className="text-warning">{s.rowsWarning} تنبيه</span>}
           <span>{formatDateTime(s.importedAt)}</span>

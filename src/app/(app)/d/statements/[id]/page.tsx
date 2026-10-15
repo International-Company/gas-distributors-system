@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { requirePageActor } from "@/server/http/context";
-import { getStatement, statementActivity } from "@/server/services/statements";
+import { getStatement, statementActivity, statementDue } from "@/server/services/statements";
+import { getPublicSettings } from "@/server/services/settings";
 import { FIELD_LABELS, REQUIRED_FIELDS } from "@/server/statements/mapping";
 import { Alert, Badge, Card, DetailList, EmptyState, PageHeader, buttonClass, cn } from "@/components/ui";
 import { StatementStatusBadge } from "@/components/statement-status";
@@ -10,6 +11,7 @@ import { formatDateTime, formatMoney } from "@/lib/format";
 import { ApprovePanel, MappingPanel, MetaPanel, RowActions } from "./review";
 import { OcrPanel } from "./ocr-panel";
 import { StatementActions } from "../statement-actions";
+import { PriceEditor } from "./price-editor";
 import { STATEMENT_STEPS, Steps } from "@/components/steps";
 
 export const metadata = { title: "مراجعة كشف" };
@@ -38,6 +40,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
   if (defaultErrors) data = await getStatement(actor, id, { severity: "ERROR", page: sp.page });
   const severity = sp.severity ?? (defaultErrors ? "ERROR" : "");
   const ex = (st.extraction ?? {}) as Extraction;
+  const [due, settings] = await Promise.all([statementDue(actor, id), getPublicSettings()]);
   const activity = st.status === "APPROVED" ? (await statementActivity(actor, [st.id])).get(st.id) ?? 0 : 0;
   const mapping = (st.columnMapping ?? {}) as Record<string, number | null>;
   const mappingBroken = pending && data.preview.length > 0 && REQUIRED_FIELDS.some((f) => mapping[f] == null);
@@ -177,6 +180,9 @@ export default async function StatementPage({ params, searchParams }: { params: 
             <Num label="سليم" value={data.summary.ok} tone="text-success" />
             <Num label="تنبيه" value={data.summary.warning} tone={data.summary.warning ? "text-warning" : undefined} />
             <Num label="خطأ" value={data.summary.error} tone={data.summary.error ? "text-danger" : undefined} />
+          </div>
+          <div className="mt-3">
+            <PriceEditor statementId={id} price={due.price} currency={settings.currencySymbol} cylinders={due.cylinders} total={due.total} editable={pending} />
           </div>
           <p className="mt-3 text-sm text-muted">
             {st.cycle ? st.cycle.name : "لم تُحدد الدورة"}

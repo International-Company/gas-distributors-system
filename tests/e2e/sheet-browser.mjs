@@ -106,6 +106,17 @@ try {
   await page.setInputFiles("#u-file", xlsx);
   await page.waitForURL(/\/d\/statements\/[0-9a-f-]+$/, { timeout: 30000 });
   check("الدورة أُنشئت تلقائيًا وانتقل للمراجعة (الخطوة 2)", (await page.locator("[aria-current=step]").textContent()).includes("راجع البيانات"));
+  const rv = await body();
+  check("المراجعة تعرض سعر الجرة والمجموع المطلوب (3 × 25 = 75)", rv.includes("سعر الجرة") && rv.includes("المجموع المطلوب") && rv.includes("75.00"));
+  await page.getByRole("button", { name: "تعديل السعر" }).click();
+  await page.fill("#st-price-edit", "30");
+  await page.getByRole("button", { name: "حفظ" }).click();
+  const recalc = await page.waitForFunction(() => (document.body.textContent ?? "").replace(/[⁦-⁩]/g, "").includes("90.00"), null, { timeout: 10000 }).then(() => true, () => false);
+  check("تعديل السعر قبل الاعتماد يعيد حساب المجموع (3 × 30 = 90)", recalc);
+  await page.getByRole("button", { name: "تعديل السعر" }).click();
+  await page.fill("#st-price-edit", "25");
+  await page.getByRole("button", { name: "حفظ" }).click();
+  await page.waitForFunction(() => (document.body.textContent ?? "").replace(/[⁦-⁩]/g, "").includes("75.00"), null, { timeout: 10000 });
   check("الكشف السليم: زر اعتماد واحد بعدد الناس", (await page.getByRole("button", { name: "اعتمد الكشف (3 شخص)" }).count()) === 1);
   await page.screenshot({ path: `${OUT}/s-00-review.png`, fullPage: true });
   await page.getByRole("button", { name: /اعتمد الكشف/ }).click();
