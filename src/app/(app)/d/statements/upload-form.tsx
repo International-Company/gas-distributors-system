@@ -3,14 +3,16 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FileUp, Loader2, RefreshCw, Tag } from "lucide-react";
+import { FileUp, FolderOpen, FolderPlus, Loader2, RefreshCw, Tag } from "lucide-react";
 import { Alert, cn } from "@/components/ui";
 import { ApiError } from "@/components/api-client";
 import { normalizeDigits } from "@/lib/arabic";
 
 type Props = {
-  /** الدورة النشطة إن وُجدت (وإلا تُنشأ تلقائيًا بسعر الكشف الأول). */
+  /** الدورة النشطة إن وُجدت (وإلا تبدأ دورة جديدة تلقائيًا). */
   activeCycleName: string | null;
+  /** اسم الدورة التالية المقترح (لخيار «دورة جديدة»). */
+  nextCycleName: string;
   currencySymbol: string;
   /** السعر المقترح: سعر الكشف المُبدَّل، وإلا آخر سعر استُخدم. */
   defaultPrice: string | null;
@@ -26,7 +28,7 @@ const validPrice = (v: string) => /^\d{1,7}(\.\d{1,2})?$/.test(cleanPrice(v)) &&
  * رفع كشف الهيئة: سعر الجرة في هذا الكشف (مقترح من آخر سعر)، ثم اسحب الملف أو اختره فيُرفع فورًا.
  * العنوان ورقم الميزان يُقرآن من رأس الكشف، والتحديث لكشف سابق يُكتشف تلقائيًا من رقم الميزان.
  */
-export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, defaultCost, replace }: Props) {
+export function UploadForm({ activeCycleName, nextCycleName, currencySymbol, defaultPrice, defaultCost, replace }: Props) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [price, setPrice] = useState(defaultPrice ?? "");
@@ -34,6 +36,9 @@ export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, defa
   const [error, setError] = useState("");
   const [drag, setDrag] = useState(false);
   const [cost, setCost] = useState(defaultCost ?? "");
+  // وين ينضاف الكشف: الدورة الحالية أو دورة جديدة (بلا دورة مفتوحة: جديدة حتمًا).
+  const [target, setTarget] = useState<"current" | "new">(activeCycleName ? "current" : "new");
+  const startsNew = !replace && (target === "new" || !activeCycleName);
   const costOk = !cost.trim() || validPrice(cost);
   const ready = validPrice(price) && costOk;
   const margin = validPrice(price) && validPrice(cost) ? Number(cleanPrice(price)) - Number(cleanPrice(cost)) : null;
@@ -45,11 +50,12 @@ export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, defa
     setError("");
     const unitPrice = cleanPrice(price);
     try {
-      if (!activeCycleName && !replace) {
-        setBusy("تجهيز الدورة…");
-        const c = await fetch("/api/v1/cycles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ unitPrice }) });
+      if (startsNew) {
+        setBusy(`بدء ${nextCycleName}…`);
+        const c = await fetch("/api/v1/cycles/next", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ unitPrice }) });
         const cj = await c.json().catch(() => null);
-        if (!c.ok) throw new ApiError(cj?.error?.code ?? "INTERNAL", cj?.error?.fields?.unitPrice ?? cj?.error?.message ?? "تعذر تجهيز الدورة");
+        if (!c.ok) throw new ApiError(cj?.error?.code ?? "INTERNAL", cj?.error?.message ?? "تعذر بدء الدورة الجديدة");
+        setTarget("current");
       }
       setBusy("جاري رفع الكشف وقراءته…");
       const form = new FormData();
@@ -97,6 +103,20 @@ export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, defa
           )}
         </div>
 
+        {/* وين ينضاف الكشف */}
+        {!replace && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
+            <span className="text-sm font-semibold">ينضاف إلى</span>
+            <div className="flex flex-1 flex-wrap gap-1 rounded-xl bg-surface-2 p-1" role="radiogroup" aria-label="الدورة">
+              {activeCycleName && (
+                <TargetOption checked={target === "current"} onClick={() => setTarget("current")} icon={<FolderOpen className="size-4" />} label={activeCycleName} hint="الحالية" />
+              )}
+              <TargetOption checked={startsNew} onClick={() => setTarget("new")} icon={<FolderPlus className="size-4" />} label="دورة جديدة" hint={nextCycleName} />
+            </div>
+            {startsNew && activeCycleName && <p className="w-full text-xs text-muted">راح تنتهي «{activeCycleName}» وتبدأ «{nextCycleName}» قبل رفع الكشف. ناس الدورة القديمة وفلوسها بيضلوا زي ما هم.</p>}
+          </div>
+        )}
+
         {/* الملف */}
         <label
           htmlFor="u-file"
@@ -113,7 +133,7 @@ export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, defa
           <span className="text-base font-semibold">
             {busy || (!ready ? (costOk ? "اكتب سعر الجرة على المواطن أولًا" : "صحّح سعر الجرة على الموزّع") : replace ? "اسحب الكشف الجديد هون، أو اضغط لاختياره" : "اسحب ملف كشف الهيئة هون، أو اضغط لاختياره")}
           </span>
-          {!busy && <span className="text-xs text-muted">PDF أو Excel{activeCycleName ? ` · يُضاف إلى ${activeCycleName}` : ""}</span>}
+          {!busy && <span className="text-xs text-muted">PDF أو Excel</span>}
         </label>
       </div>
       <input
@@ -126,6 +146,25 @@ export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, defa
         disabled={!ready || Boolean(busy)}
       />
     </div>
+  );
+}
+
+function TargetOption({ checked, onClick, icon, label, hint }: { checked: boolean; onClick: () => void; icon: React.ReactNode; label: string; hint: string }) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={checked}
+      onClick={onClick}
+      className={cn(
+        "flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+        checked ? "bg-surface font-semibold text-primary shadow-sm ring-1 ring-primary/30" : "text-muted hover:text-text",
+      )}
+    >
+      {icon}
+      <span className="truncate">{label}</span>
+      <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px]", checked ? "bg-primary-soft" : "bg-surface")}>{hint}</span>
+    </button>
   );
 }
 

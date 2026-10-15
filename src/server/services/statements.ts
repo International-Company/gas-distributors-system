@@ -803,13 +803,14 @@ export async function lastStatementCost(actor: Actor) {
   });
 }
 
-/** آخر سعر جرة استُخدم (لتعبئة حقل السعر عند رفع كشف جديد): آخر كشف غير ملغى، وإلا سعر الدورة النشطة. */
+/** آخر سعر جرة استُخدم (لتعبئة حقل السعر عند رفع كشف جديد): آخر كشف، وإلا سعر الدورة النشطة. */
 export async function lastStatementPrice(actor: Actor) {
   assertDistributor(actor);
   return withTenant(actor.distributorId, async (tx) => {
-    const last = await tx.statement.findFirst({ where: { status: { not: "DISCARDED" }, unitPrice: { not: null } }, orderBy: { importedAt: "desc" }, select: { unitPrice: true } });
+    // الملغى يُحسب أيضًا: سعره ما زال أفضل اقتراح من لا شيء.
+    const last = await tx.statement.findFirst({ where: { unitPrice: { not: null, gt: 0 } }, orderBy: { importedAt: "desc" }, select: { unitPrice: true } });
     if (last?.unitPrice) return last.unitPrice.toFixed(2);
     const active = await getActiveCycle(tx);
-    return active ? active.unitPrice.toFixed(2) : null;
+    return active && active.unitPrice.gt(0) ? active.unitPrice.toFixed(2) : null;
   });
 }

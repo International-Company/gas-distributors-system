@@ -29,10 +29,22 @@ export async function listCycles(actor: Actor) {
       _count: { _all: true },
       _sum: { quantity: true, amountDue: true },
     });
+    const paid = await tx.payment.groupBy({ by: ["cycleId"], where: { status: "ACTIVE" }, _sum: { amount: true } });
+    const sts = await tx.statement.groupBy({ by: ["cycleId", "status"], where: { cycleId: { not: null } }, _count: { _all: true } });
     const byCycle = new Map(counts.map((c) => [c.cycleId, c]));
+    const paidBy = new Map(paid.map((p) => [p.cycleId, p._sum.amount]));
+    const stCount = (id: string, status: string) => sts.find((x) => x.cycleId === id && x.status === status)?._count._all ?? 0;
     return cycles.map((c) => {
       const s = byCycle.get(c.id);
-      return { ...c, citizens: s?._count._all ?? 0, cylinders: s?._sum.quantity ?? 0, amountDue: s?._sum.amountDue ?? new Prisma.Decimal(0) };
+      return {
+        ...c,
+        citizens: s?._count._all ?? 0,
+        cylinders: s?._sum.quantity ?? 0,
+        amountDue: s?._sum.amountDue ?? new Prisma.Decimal(0),
+        collected: paidBy.get(c.id) ?? new Prisma.Decimal(0),
+        approvedStatements: stCount(c.id, "APPROVED"),
+        pendingStatements: stCount(c.id, "PENDING_REVIEW"),
+      };
     });
   });
 }
@@ -145,6 +157,65 @@ export async function changeCyclePrice(actor: Actor, cycleId: string, input: unk
     const details = { from: cycle.unitPrice.toString(), to: v.unitPrice };
     await tx.cycleEvent.create({ data: { distributorId: actor.distributorId, cycleId, type: "PRICE_CHANGED", reason: v.reason, details, userId: actor.userId } });
     await log(tx, actor, "price_change", cycleId, { unitPrice: v.unitPrice }, { unitPrice: cycle.unitPrice }, v.reason);
+    return after;
+  });
+}
+
+const nextSchema = z.object({
+  name: z.string().trim().max(100).optional().or(z.literal("").transform(() => undefined)),
+  unitPrice: priceSchema.optional().or(z.literal("").transform(() => undefined)),
+});
+
+/**
+ * «ابدأ دورة جديدة» بخطوة واحدة: تُغلق الدورة الحالية (إن وُجدت) وتُفتح التالية.
+ * إغلاق الدورة لا يمسّ ناسها ولا فلوسها: يبقى التسليم والقبض لكشوفها كما هو.
+ * يُمنع ما دام في الدورة الحالية كشف بانتظار الاعتماد.
+ */
+export async function startNextCycle(actor: Actor, input: unknown) {
+  assertDistributor(actor);
+  const v = nextSchema.parse(input ?? {});
+  return withTenant(actor.distributorId, async (tx) => {
+    const active = await getActiveCycle(tx);
+    let closed: { id: string; name: string } | null = null;
+    if (active) {
+      const cycle = await lockCycle(tx, active.id);
+      const pending = await tx.statement.count({ where: { cycleId: cycle.id, status: "PENDING_REVIEW" } });
+      if (pending) throw new AppError("INVALID_STATE", `في «${cycle.name}» ${pending} كشف بانتظار الاعتماد. اعتمده أو احذفه أولًا`);
+      await tx.cycle.update({ where: { id: cycle.id }, data: { status: "CLOSED", closedAt: new Date(), closedById: actor.userId } });
+      await tx.cycleEvent.create({ data: { distributorId: actor.distributorId, cycleId: cycle.id, type: "CLOSED", userId: actor.userId } });
+      await log(tx, actor, "close", cycle.id, { status: "CLOSED" }, { status: "OPEN" });
+      closed = { id: cycle.id, name: cycle.name };
+    }
+    const last = await tx.cycle.findFirst({ orderBy: { number: "desc" }, select: { number: true, unitPrice: true } });
+    // سعر الدورة احتياطي فقط (لكل كشف سعره): المُرسل، وإلا آخر سعر كشف، وإلا سعر الدورة السابقة.
+    const lastSt = v.unitPrice ? null : await tx.statement.findFirst({ where: { unitPrice: { not: null } }, orderBy: { importedAt: "desc" }, select: { unitPrice: true } });
+    const number = (last?.number ?? 0) + 1;
+    const settings = await getSettings(tx);
+    const cycle = await tx.cycle.create({
+      data: {
+        distributorId: actor.distributorId,
+        number,
+        name: v.name || `الدورة ${number}`,
+        unitPrice: v.unitPrice ? new Prisma.Decimal(v.unitPrice) : lastSt?.unitPrice ?? last?.unitPrice ?? new Prisma.Decimal(0),
+        currencyCode: settings.currencyCode,
+        openedById: actor.userId,
+      },
+    });
+    await tx.cycleEvent.create({ data: { distributorId: actor.distributorId, cycleId: cycle.id, type: "OPENED", userId: actor.userId } });
+    await log(tx, actor, "open", cycle.id, cycle);
+    return { cycle, closed };
+  }).catch(uniqueToConflict);
+}
+
+/** تغيير اسم الدورة (مفتوحة أو مغلقة). */
+export async function renameCycle(actor: Actor, cycleId: string, input: unknown) {
+  assertDistributor(actor);
+  const { name } = z.object({ name: z.string().trim().min(1, "اكتب اسم الدورة").max(100) }).parse(input);
+  return withTenant(actor.distributorId, async (tx) => {
+    const cycle = await lockCycle(tx, cycleId);
+    if (cycle.name === name) return cycle;
+    const after = await tx.cycle.update({ where: { id: cycleId }, data: { name } });
+    await log(tx, actor, "rename", cycleId, { name }, { name: cycle.name });
     return after;
   });
 }
