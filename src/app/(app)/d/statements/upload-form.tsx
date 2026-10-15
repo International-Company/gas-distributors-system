@@ -14,6 +14,8 @@ type Props = {
   currencySymbol: string;
   /** السعر المقترح: سعر الكشف المُبدَّل، وإلا آخر سعر استُخدم. */
   defaultPrice: string | null;
+  /** سعر الجرة على الموزّع المقترح (آخر سعر استُخدم). */
+  defaultCost: string | null;
   replace?: { id: string; title: string } | null;
 };
 
@@ -24,19 +26,22 @@ const validPrice = (v: string) => /^\d{1,7}(\.\d{1,2})?$/.test(cleanPrice(v)) &&
  * رفع كشف الهيئة: سعر الجرة في هذا الكشف (مقترح من آخر سعر)، ثم اسحب الملف أو اختره فيُرفع فورًا.
  * العنوان ورقم الميزان يُقرآن من رأس الكشف، والتحديث لكشف سابق يُكتشف تلقائيًا من رقم الميزان.
  */
-export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, replace }: Props) {
+export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, defaultCost, replace }: Props) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [price, setPrice] = useState(defaultPrice ?? "");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [drag, setDrag] = useState(false);
-  const ready = validPrice(price);
+  const [cost, setCost] = useState(defaultCost ?? "");
+  const costOk = !cost.trim() || validPrice(cost);
+  const ready = validPrice(price) && costOk;
+  const margin = validPrice(price) && validPrice(cost) ? Number(cleanPrice(price)) - Number(cleanPrice(cost)) : null;
 
   const upload = async (file: File | undefined) => {
     if (!file || busy) return;
     if (!/\.(pdf|xlsx)$/i.test(file.name)) return setError("الملف لازم يكون PDF أو Excel (.xlsx)");
-    if (!ready) return setError("اكتب سعر الجرة في هذا الكشف أولًا");
+    if (!ready) return setError(costOk ? "اكتب سعر الجرة على المواطن أولًا" : "سعر الجرة على الموزّع غير صحيح");
     setError("");
     const unitPrice = cleanPrice(price);
     try {
@@ -50,6 +55,7 @@ export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, repl
       const form = new FormData();
       form.set("file", file);
       form.set("unitPrice", unitPrice);
+      if (cost.trim()) form.set("costPrice", cleanPrice(cost));
       if (replace) form.set("supersedesId", replace.id);
       const res = await fetch("/api/v1/statements", { method: "POST", body: form });
       const json = await res.json().catch(() => null);
@@ -73,26 +79,22 @@ export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, repl
       )}
 
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">
-        {/* سعر الجرة في هذا الكشف */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary"><Tag className="size-4" /></span>
-          <label htmlFor="u-price" className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold">سعر الجرة في هذا الكشف</span>
-            <span className="block text-xs text-muted">يُحسب منه المطلوب من كل شخص (إلا إذا ذكر الكشف المبلغ)</span>
-          </label>
-          <div className={cn("flex h-11 items-center overflow-hidden rounded-xl border bg-surface transition-colors focus-within:ring-2 focus-within:ring-ring", price && !ready ? "border-danger" : "border-border")}>
-            <input
-              id="u-price"
-              dir="ltr"
-              inputMode="decimal"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="0.00"
-              className="h-full w-28 bg-transparent px-3 text-center text-lg font-bold tabular-nums outline-none"
-              aria-invalid={Boolean(price) && !ready}
-            />
-            <span className="flex h-full items-center border-s border-border bg-surface-2 px-3 text-sm text-muted">{currencySymbol}</span>
+        {/* سعر الجرة في هذا الكشف: على المواطن وعلى الموزّع */}
+        <div className="border-b border-border px-4 py-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+            <span className="flex size-7 items-center justify-center rounded-full bg-primary-soft text-primary"><Tag className="size-3.5" /></span>
+            سعر الجرة في هذا الكشف
           </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <PriceField id="u-price" label="على المواطن" hint="المطلوب من كل شخص" value={price} onChange={setPrice} currency={currencySymbol} invalid={Boolean(price) && !validPrice(price)} />
+            <PriceField id="u-cost" label="على الموزّع" hint="اللي بتدفعه أنت (اختياري)" value={cost} onChange={setCost} currency={currencySymbol} invalid={!costOk} />
+          </div>
+          {margin !== null && (
+            <div className={cn("mt-2 rounded-lg px-3 py-1.5 text-sm", margin < 0 ? "bg-danger-soft text-danger" : "bg-success-soft text-success")} id="u-margin">
+              {margin < 0 ? "انتبه: سعر الموزّع أعلى من سعر المواطن — خسارة " : "ربحك في كل جرة "}
+              <strong className="tabular-nums"><bdi dir="ltr">{Math.abs(margin).toFixed(2)} {currencySymbol}</bdi></strong>
+            </div>
+          )}
         </div>
 
         {/* الملف */}
@@ -109,7 +111,7 @@ export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, repl
         >
           {busy ? <Loader2 className="size-10 animate-spin text-primary" /> : <FileUp className="size-10 text-primary" />}
           <span className="text-base font-semibold">
-            {busy || (!ready ? "اكتب سعر الجرة أولًا" : replace ? "اسحب الكشف الجديد هون، أو اضغط لاختياره" : "اسحب ملف كشف الهيئة هون، أو اضغط لاختياره")}
+            {busy || (!ready ? (costOk ? "اكتب سعر الجرة على المواطن أولًا" : "صحّح سعر الجرة على الموزّع") : replace ? "اسحب الكشف الجديد هون، أو اضغط لاختياره" : "اسحب ملف كشف الهيئة هون، أو اضغط لاختياره")}
           </span>
           {!busy && <span className="text-xs text-muted">PDF أو Excel{activeCycleName ? ` · يُضاف إلى ${activeCycleName}` : ""}</span>}
         </label>
@@ -123,6 +125,30 @@ export function UploadForm({ activeCycleName, currencySymbol, defaultPrice, repl
         onChange={(e) => void upload(e.target.files?.[0])}
         disabled={!ready || Boolean(busy)}
       />
+    </div>
+  );
+}
+
+function PriceField({ id, label, hint, value, onChange, currency, invalid }: { id: string; label: string; hint: string; value: string; onChange: (v: string) => void; currency: string; invalid: boolean }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-2">
+      <label htmlFor={id} className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">{label}</span>
+        <span className="block truncate text-xs text-muted">{hint}</span>
+      </label>
+      <div className={cn("flex h-11 items-center overflow-hidden rounded-xl border bg-surface transition-colors focus-within:ring-2 focus-within:ring-ring", invalid ? "border-danger" : "border-border")}>
+        <input
+          id={id}
+          dir="ltr"
+          inputMode="decimal"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="0.00"
+          className="h-full w-24 bg-transparent px-2 text-center text-lg font-bold tabular-nums outline-none"
+          aria-invalid={invalid}
+        />
+        <span className="flex h-full items-center border-s border-border bg-surface-2 px-2.5 text-sm text-muted">{currency}</span>
+      </div>
     </div>
   );
 }

@@ -103,17 +103,21 @@ try {
   await page.getByRole("link", { name: /ارفع كشف/ }).click();
   await page.waitForURL("**/d/statements");
   await page.fill("#u-price", "25");
+  await page.fill("#u-cost", "20");
+  check("الرفع: سعران (على المواطن وعلى الموزّع) وربح الجرة يظهر فورًا", strip(await page.locator("#u-margin").textContent()).includes("5.00"));
+  await page.screenshot({ path: `${OUT}/s-00-upload.png`, fullPage: true });
   await page.setInputFiles("#u-file", xlsx);
   await page.waitForURL(/\/d\/statements\/[0-9a-f-]+$/, { timeout: 30000 });
   check("الدورة أُنشئت تلقائيًا وانتقل للمراجعة (الخطوة 2)", (await page.locator("[aria-current=step]").textContent()).includes("راجع البيانات"));
   const rv = await body();
-  check("المراجعة تعرض سعر الجرة والمجموع المطلوب (3 × 25 = 75)", rv.includes("سعر الجرة") && rv.includes("المجموع المطلوب") && rv.includes("75.00"));
-  await page.getByRole("button", { name: "تعديل السعر" }).click();
+  check("المراجعة تعرض السعرين والمجموع المطلوب (3 × 25 = 75)", rv.includes("على المواطن") && rv.includes("على الموزّع") && rv.includes("المجموع المطلوب") && rv.includes("75.00"));
+  check("المراجعة تعرض الربح المتوقع (75 − 3 × 20 = 15)", strip(await page.locator("#st-profit").textContent()).includes("15.00"));
+  await page.click("#st-price-btn");
   await page.fill("#st-price-edit", "30");
   await page.getByRole("button", { name: "حفظ" }).click();
   const recalc = await page.waitForFunction(() => (document.body.textContent ?? "").replace(/[⁦-⁩]/g, "").includes("90.00"), null, { timeout: 10000 }).then(() => true, () => false);
-  check("تعديل السعر قبل الاعتماد يعيد حساب المجموع (3 × 30 = 90)", recalc);
-  await page.getByRole("button", { name: "تعديل السعر" }).click();
+  check("تعديل السعر قبل الاعتماد يعيد حساب المجموع (3 × 30 = 90) والربح (30)", recalc && strip(await page.locator("#st-profit").textContent()).includes("30.00"));
+  await page.click("#st-price-btn");
   await page.fill("#st-price-edit", "25");
   await page.getByRole("button", { name: "حفظ" }).click();
   await page.waitForFunction(() => (document.body.textContent ?? "").replace(/[⁦-⁩]/g, "").includes("75.00"), null, { timeout: 10000 });
@@ -226,7 +230,18 @@ try {
   await page.goto(BASE + "/d/finance");
   const fin = await body();
   check("الفلوس: المقبوض 35 والمصاريف 30 والرصيد 5", fin.includes("35.00") && fin.includes("30.00") && fin.includes("5.00") && !fin.includes("دفعات المحطات"));
+  // ربح الكشف: بيع 75 − تكلفة 3 × 20 = 15، والمقبوض 35
+  const card = page.locator("#profits article").first();
+  const pc = strip(await card.textContent());
+  check("الفلوس: بطاقة الكشف فيها السعران وربح الجرة 5", pc.includes("على الموزّع") && pc.includes("على المواطن") && pc.includes("ربح الجرة") && pc.includes("5.00"), pc);
+  check("الفلوس: ربحك المتوقع من الكشف 15 وتقدم التسليم والقبض", strip(await card.locator("[data-profit]").textContent()).includes("15.00") && pc.includes("سلّمت 1 من 3 جرة") && pc.includes("انقبض 35.00 من 75.00"), pc);
+  check("الفلوس: باقي 25 لتغطي التكلفة (35 − 60)", pc.includes("باقي 25.00 لتغطي التكلفة"), pc);
   await page.screenshot({ path: `${OUT}/s-04-money.png`, fullPage: true });
+  await card.getByRole("button", { name: "تعديل سعر الجرة على الموزّع" }).click();
+  await card.locator("input[aria-label='سعر الجرة على الموزّع']").fill("22");
+  await card.getByRole("button", { name: "حفظ سعر الموزّع" }).click();
+  const reprofit = await page.waitForFunction(() => (document.querySelector("#profits [data-profit]")?.textContent ?? "").replace(/[⁦-⁩]/g, "").includes("9.00"), null, { timeout: 10000 }).then(() => true, () => false);
+  check("تعديل سعر الموزّع من الفلوس يعيد حساب الربح (75 − 66 = 9)", reprofit);
 
   // ذكاء الرفع: الكشف نفسه (نفس رقم الميزان) يُعتبر تحديثًا تلقائيًا ويظهر الفرق
   await page.goto(BASE + "/d/statements");
@@ -244,6 +259,10 @@ try {
   await mp.locator("[data-row]").first().waitFor();
   await mp.screenshot({ path: `${OUT}/s-05-mobile.png`, fullPage: true });
   check("الهاتف: لا تمرير أفقي", (await mp.evaluate(() => document.documentElement.scrollWidth)) <= 390);
+  await mp.goto(BASE + "/d/finance");
+  await mp.locator("#profits article").first().waitFor();
+  await mp.screenshot({ path: `${OUT}/s-08-money-mobile.png`, fullPage: true });
+  check("الهاتف: صفحة الفلوس مع الربح بلا تمرير أفقي", (await mp.evaluate(() => document.documentElement.scrollWidth)) <= 390);
 
   console.log("أخطاء المتصفح:", errors.filter((e) => !/Failed to fetch|NetworkError|ERR_/.test(e)));
   await browser.close();

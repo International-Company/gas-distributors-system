@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { requirePageActor } from "@/server/http/context";
-import { lastStatementPrice, listStatements, statementActivity } from "@/server/services/statements";
+import { lastStatementCost, lastStatementPrice, listStatements, statementActivity } from "@/server/services/statements";
 import { listCycles } from "@/server/services/cycles";
 import { getPublicSettings } from "@/server/services/settings";
 import { PageHeader, buttonClass } from "@/components/ui";
@@ -18,7 +18,7 @@ type Item = Awaited<ReturnType<typeof listStatements>>[number];
 export default async function StatementsPage({ searchParams }: { searchParams: Promise<{ replace?: string }> }) {
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
   const sp = await searchParams;
-  const [list, cycles, settings, lastPrice] = await Promise.all([listStatements(actor, {}), listCycles(actor), getPublicSettings(), lastStatementPrice(actor)]);
+  const [list, cycles, settings, lastPrice, lastCost] = await Promise.all([listStatements(actor, {}), listCycles(actor), getPublicSettings(), lastStatementPrice(actor), lastStatementCost(actor)]);
   const open = cycles.find((c) => c.status === "OPEN");
   const pending = list.filter((s) => s.status === "PENDING_REVIEW");
   const approved = list.filter((s) => s.status === "APPROVED");
@@ -33,6 +33,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         activeCycleName={open?.name ?? null}
         currencySymbol={settings.currencySymbol}
         defaultPrice={(replacing?.unitPrice ?? replacing?.cycle?.unitPrice)?.toFixed(2) ?? lastPrice}
+        defaultCost={replacing ? replacing.costPrice?.toFixed(2) ?? lastCost : lastCost}
         replace={replacing ? { id: replacing.id, title: replacing.title } : null}
       />
 
@@ -111,7 +112,8 @@ function Row({ s, href, cta, plain, currency }: { s: Item; href: string; cta?: R
         </div>
         <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted">
           <span>{people} شخص</span>
-          {price && <span>الجرة <bdi dir="ltr" className="font-semibold text-text">{price.toFixed(2)} {currency}</bdi></span>}
+          {price && <span>على المواطن <bdi dir="ltr" className="font-semibold text-text">{price.toFixed(2)} {currency}</bdi></span>}
+          {s.costPrice && <span>على الموزّع <bdi dir="ltr" className="font-semibold text-text">{s.costPrice.toFixed(2)} {currency}</bdi></span>}
           {s.rowsError > 0 && <span className="text-danger">{s.rowsError} فيها أخطاء</span>}
           {s.rowsWarning > 0 && <span className="text-warning">{s.rowsWarning} تنبيه</span>}
           <span>{formatDateTime(s.importedAt)}</span>

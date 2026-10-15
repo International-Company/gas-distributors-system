@@ -129,3 +129,92 @@ export async function moneyOverview(actor: Actor, input: unknown) {
     };
   }, { timeout: 30_000 });
 }
+
+// ---------------------------------------------------------------------------
+// ربح كل كشف: (سعر الجرة على المواطن − سعر الجرة على الموزّع) × الجرار.
+// البيع = مجموع المطلوب من الناس في الكشف (يشمل مبالغ الهيئة إن وردت)،
+// والتكلفة = سعر الموزّع × عدد الجرار. «الصافي حتى الآن» = المقبوض − التكلفة،
+// ويصير هو الربح عندما ينقبض كل شيء.
+// ---------------------------------------------------------------------------
+
+export type StatementProfit = {
+  id: string;
+  title: string;
+  importedAt: string;
+  salePrice: string | null;
+  costPrice: string | null;
+  margin: string | null;
+  people: number;
+  cylinders: number;
+  handedCylinders: number;
+  sale: string;
+  cost: string | null;
+  profit: string | null;
+  collected: string;
+  remaining: string;
+  netSoFar: string | null;
+  done: boolean;
+};
+
+export async function statementProfits(actor: Actor) {
+  assertDistributor(actor);
+  return withTenant(actor.distributorId, async (tx) => {
+    const rows = await tx.$queryRaw<{
+      id: string; title: string; importedAt: Date; salePrice: Prisma.Decimal | null; costPrice: Prisma.Decimal | null;
+      people: bigint; cylinders: bigint | null; handed: bigint | null; sale: Prisma.Decimal | null; collected: Prisma.Decimal | null; remaining: Prisma.Decimal | null;
+    }[]>`
+      WITH e AS (
+        SELECT e."statementId", e."quantity", e."amountDue",
+          COALESCE((SELECT sum(p."amount") FROM "payments" p WHERE p."entitlementId" = e."id" AND p."status" = 'ACTIVE'), 0) AS paid,
+          COALESCE((SELECT sum(h."quantity") FROM "handovers" h WHERE h."entitlementId" = e."id" AND h."status" = 'ACTIVE'), 0) AS handed
+        FROM "entitlements" e
+        WHERE e."status" = 'ACTIVE'
+           OR EXISTS (SELECT 1 FROM "payments" p WHERE p."entitlementId" = e."id" AND p."status" = 'ACTIVE')
+           OR EXISTS (SELECT 1 FROM "handovers" h WHERE h."entitlementId" = e."id" AND h."status" = 'ACTIVE')
+      )
+      SELECT s."id", s."title", s."importedAt", COALESCE(s."unitPrice", c."unitPrice") AS "salePrice", s."costPrice",
+        count(e."statementId") AS people, sum(e."quantity") AS cylinders, sum(e."handed") AS handed,
+        sum(e."amountDue") AS sale, sum(e."paid") AS collected, sum(GREATEST(e."amountDue" - e."paid", 0)) AS remaining
+      FROM "statements" s
+      LEFT JOIN "cycles" c ON c."id" = s."cycleId"
+      LEFT JOIN e ON e."statementId" = s."id"
+      WHERE s."status" = 'APPROVED'
+      GROUP BY s."id", c."unitPrice"
+      ORDER BY s."importedAt" DESC
+      LIMIT 100`;
+
+    const items: StatementProfit[] = rows.map((r) => {
+      const cylinders = Number(r.cylinders ?? 0);
+      const sale = money(r.sale), collected = money(r.collected), remaining = money(r.remaining);
+      const cost = r.costPrice ? money(r.costPrice).mul(cylinders) : null;
+      const handedCylinders = Number(r.handed ?? 0);
+      return {
+        id: r.id,
+        title: r.title,
+        importedAt: r.importedAt.toISOString(),
+        salePrice: r.salePrice ? money(r.salePrice).toFixed(2) : null,
+        costPrice: r.costPrice ? money(r.costPrice).toFixed(2) : null,
+        margin: r.salePrice && r.costPrice ? money(r.salePrice).sub(r.costPrice).toFixed(2) : null,
+        people: Number(r.people),
+        cylinders,
+        handedCylinders,
+        sale: sale.toFixed(2),
+        cost: cost?.toFixed(2) ?? null,
+        profit: cost ? sale.sub(cost).toFixed(2) : null,
+        collected: collected.toFixed(2),
+        remaining: remaining.toFixed(2),
+        netSoFar: cost ? collected.sub(cost).toFixed(2) : null,
+        done: cylinders > 0 && remaining.isZero() && handedCylinders >= cylinders,
+      };
+    });
+    const priced = items.filter((i) => i.profit !== null);
+    return {
+      items,
+      totals: {
+        profit: priced.reduce((a, i) => a.add(i.profit!), money(0)).toFixed(2),
+        realized: priced.filter((i) => i.done).reduce((a, i) => a.add(i.profit!), money(0)).toFixed(2),
+        missingCost: items.length - priced.length,
+      },
+    };
+  });
+}

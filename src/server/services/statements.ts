@@ -184,6 +184,7 @@ async function duplicateFiles(tx: Tx, sha: string, exceptStatementId?: string) {
 const uploadMetaSchema = z.object({
   title: z.string().trim().max(150).optional(),
   unitPrice: priceSchema.optional().or(z.literal("").transform(() => undefined)),
+  costPrice: priceSchema.optional().or(z.literal("").transform(() => undefined)),
   supersedesId: z.string().uuid().optional().or(z.literal("").transform(() => undefined)),
 });
 
@@ -233,6 +234,8 @@ export async function uploadStatement(actor: Actor, file: { name: string; mime: 
         scaleNumber,
         // سعر الجرة: المُدخل عند الرفع، وإلا سعر الكشف السابق (عند التحديث)، وإلا سعر الدورة النشطة.
         unitPrice: m.unitPrice ?? supersedes?.unitPrice ?? active?.unitPrice ?? null,
+        // سعر الجرة على الموزّع: المُدخل، وإلا سعر الكشف السابق عند التحديث.
+        costPrice: m.costPrice ?? supersedes?.costPrice ?? null,
         cycleId: supersedes?.cycleId ?? active?.id ?? null,
         supersedesId: supersedes?.id ?? null,
         version: supersedes ? supersedes.version + 1 : 1,
@@ -767,6 +770,36 @@ export async function statementDue(actor: Actor, statementId: string) {
       GROUP BY s."unitPrice", c."unitPrice"`;
     if (!r) throw notFound("الكشف");
     return { cylinders: Number(r.cylinders ?? 0), total: new Prisma.Decimal(r.total ?? 0).toFixed(2), price: r.price ? new Prisma.Decimal(r.price).toFixed(2) : null };
+  });
+}
+
+const costSchema = z.object({ costPrice: priceSchema.nullable().or(z.literal("").transform(() => null)) });
+
+/**
+ * سعر الجرة على الموزّع (تكلفته) في كشف: يُعدَّل في أي وقت قبل الاعتماد أو بعده،
+ * لأنه لا يغيّر المطلوب من الناس، بل يحسب ربح الموزّع فقط.
+ */
+export async function setStatementCost(actor: Actor, statementId: string, input: unknown) {
+  assertDistributor(actor);
+  const v = costSchema.parse(input ?? {});
+  return withTenant(actor.distributorId, async (tx) => {
+    const st = await lockStatement(tx, statementId);
+    if (st.status !== "PENDING_REVIEW" && st.status !== "APPROVED") throw new AppError("INVALID_STATE", "الكشف قديم أو ملغى");
+    const before = st.costPrice?.toFixed(2) ?? null;
+    const after = v.costPrice?.toFixed(2) ?? null;
+    if (before === after) return { id: st.id, costPrice: after };
+    await tx.statement.update({ where: { id: st.id }, data: { costPrice: v.costPrice } });
+    await log(tx, actor, "cost", st.id, { costPrice: after }, { costPrice: before });
+    return { id: st.id, costPrice: after };
+  });
+}
+
+/** آخر سعر جرة على الموزّع استُخدم (لتعبئة الحقل عند رفع كشف جديد). */
+export async function lastStatementCost(actor: Actor) {
+  assertDistributor(actor);
+  return withTenant(actor.distributorId, async (tx) => {
+    const last = await tx.statement.findFirst({ where: { status: { not: "DISCARDED" }, costPrice: { not: null } }, orderBy: { importedAt: "desc" }, select: { costPrice: true } });
+    return last?.costPrice?.toFixed(2) ?? null;
   });
 }
 

@@ -345,6 +345,8 @@ model Statement {
   // سعر الجرة على المواطن في هذا الكشف (يُدخل عند الرفع). يُحسب منه المطلوب من كل شخص
   // ما لم يذكر الكشف مبلغه. إن غاب (كشوف قديمة) يُستخدم سعر الدورة.
   unitPrice      Decimal?        @db.Decimal(12, 2)
+  // سعر الجرة على الموزّع (تكلفته) في هذا الكشف، لحساب الربح.
+  costPrice      Decimal?        @db.Decimal(12, 2)
   status         StatementStatus @default(PENDING_REVIEW)
   // الإصدار المعتمد السابق الذي يحل محله هذا الكشف عند التحديث.
   supersedesId   String?         @db.Uuid

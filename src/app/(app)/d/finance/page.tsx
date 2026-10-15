@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { ArrowDownLeft, ArrowUpRight, Users, Wallet } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, CheckCircle2, FileText, TrendingUp, Users, Wallet } from "lucide-react";
 import { requirePageActor } from "@/server/http/context";
-import { moneyOverview, PERIODS, type MoneyDay, type Period } from "@/server/services/money";
+import { moneyOverview, statementProfits, PERIODS, type MoneyDay, type Period, type StatementProfit } from "@/server/services/money";
+import { getPublicSettings } from "@/server/services/settings";
 import { Button, Card, EmptyState, PageHeader, buttonClass, cn } from "@/components/ui";
 import { DateInput } from "@/components/date-input";
 import { formatMoney } from "@/lib/format";
 import { CancelRecord } from "./cancel-record";
 import { NewExpense } from "./new-expense";
+import { CostInline } from "./cost-inline";
 
 export const metadata = { title: "الفلوس" };
 
@@ -23,7 +25,7 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
   const actor = await requirePageActor({ role: "DISTRIBUTOR" });
   const sp = await searchParams;
   const period = (PERIODS as readonly string[]).includes(sp.period ?? "") ? (sp.period as Period) : "today";
-  const m = await moneyOverview(actor, { period, from: sp.from, to: sp.to });
+  const [m, profits, settings] = await Promise.all([moneyOverview(actor, { period, from: sp.from, to: sp.to }), statementProfits(actor), getPublicSettings()]);
   const cash = Number(m.cashInHand);
   const duePct = Number(m.dues.due) > 0 ? Math.round((Number(m.dues.paid) / Number(m.dues.due)) * 100) : 0;
   const dayLabel = (d: string) => (d === m.period.today ? "اليوم" : d === yesterday(m.period.today) ? "أمس" : `${weekday(d)} ${dm(d)}`);
@@ -96,6 +98,9 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
           </div>
       </Card>
 
+      {/* ربح الكشوفات */}
+      {profits.items.length > 0 && <ProfitsSection data={profits} currency={settings.currencySymbol} />}
+
       {/* الحركات */}
       <section>
         <h2 className="mb-2 text-sm font-semibold text-muted">الحركات — {PERIOD_LABELS[period]}</h2>
@@ -164,6 +169,112 @@ function DayGroup({ day, label }: { day: MoneyDay; label: string }) {
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+function ProfitsSection({ data, currency }: { data: Awaited<ReturnType<typeof statementProfits>>; currency: string }) {
+  const total = Number(data.totals.profit);
+  return (
+    <section id="profits" className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-muted"><TrendingUp className="size-4" /> ربحك من الكشوفات</h2>
+        {data.items.length > 1 && data.totals.missingCost < data.items.length && (
+          <div className="text-sm">
+            المجموع <strong className={cn("tabular-nums", total < 0 ? "text-danger" : "text-success")}>{formatMoney(data.totals.profit, currency)}</strong>
+            {Number(data.totals.realized) !== 0 && <span className="text-muted"> · منه تحقق {formatMoney(data.totals.realized, currency)}</span>}
+          </div>
+        )}
+      </div>
+      {data.items.map((p) => <ProfitCard key={p.id} p={p} currency={currency} />)}
+    </section>
+  );
+}
+
+function ProfitCard({ p, currency }: { p: StatementProfit; currency: string }) {
+  const profit = p.profit === null ? null : Number(p.profit);
+  const net = p.netSoFar === null ? null : Number(p.netSoFar);
+  const margin = p.margin === null ? null : Number(p.margin);
+  const handedPct = p.cylinders ? Math.round((p.handedCylinders / p.cylinders) * 100) : 0;
+  const paidPct = Number(p.sale) > 0 ? Math.round((Number(p.collected) / Number(p.sale)) * 100) : 0;
+  return (
+    <article className="overflow-hidden rounded-2xl border border-border bg-surface" data-statement={p.id}>
+      {/* العنوان */}
+      <header className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
+        <FileText className="size-4 text-primary" />
+        <Link href={`/d/sheet?s=${p.id}`} className="min-w-0 flex-1 truncate font-semibold hover:underline">{p.title}</Link>
+        {p.done ? (
+          <span className="flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success"><CheckCircle2 className="size-3.5" /> خلص</span>
+        ) : (
+          <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs text-muted">شغّال</span>
+        )}
+      </header>
+
+      {/* السعران */}
+      <div className="grid grid-cols-3 divide-x divide-x-reverse divide-border border-b border-border text-center">
+        <div className="px-2 py-2.5">
+          <div className="text-[11px] text-muted sm:text-xs">على الموزّع</div>
+          <div className="mt-0.5 flex justify-center text-sm"><CostInline statementId={p.id} cost={p.costPrice} currency={currency} /></div>
+        </div>
+        <div className="px-2 py-2.5">
+          <div className="text-[11px] text-muted sm:text-xs">على المواطن</div>
+          <div className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(p.salePrice, currency)}</div>
+        </div>
+        <div className="px-2 py-2.5">
+          <div className="text-[11px] text-muted sm:text-xs">ربح الجرة</div>
+          <div className={cn("mt-0.5 text-sm font-bold tabular-nums", margin === null ? "text-muted" : margin < 0 ? "text-danger" : "text-success")}>
+            {margin === null ? "—" : formatMoney(p.margin, currency)}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4 p-4">
+        {/* الربح */}
+        {profit === null ? (
+          <p className="rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">اكتب سعر الجرة على الموزّع فوق، ليظهر ربحك من هالكشف.</p>
+        ) : (
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="text-sm text-muted">{p.done ? "ربحك من هالكشف" : "ربحك المتوقع من هالكشف"}</div>
+              <div className={cn("text-3xl font-bold tabular-nums", profit < 0 ? "text-danger" : "text-success")} data-profit>
+                {profit < 0 && "−"}{formatMoney(Math.abs(profit).toFixed(2), currency)}
+              </div>
+              <div className="mt-0.5 text-xs text-muted">
+                بيع {formatMoney(p.sale)} − تكلفة {formatMoney(p.cost)} · {p.cylinders} جرة
+              </div>
+            </div>
+            {!p.done && net !== null && (
+              <div className={cn("rounded-xl px-3 py-2 text-sm", net >= 0 ? "bg-success-soft text-success" : "bg-surface-2 text-muted")}>
+                {net >= 0 ? (
+                  <>غطّيت التكلفة · صافي معك الآن <strong className="tabular-nums">{formatMoney(p.netSoFar)}</strong></>
+                ) : (
+                  <>باقي <strong className="tabular-nums">{formatMoney(Math.abs(net).toFixed(2))}</strong> لتغطي التكلفة</>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* التقدم */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Progress label={`سلّمت ${p.handedCylinders} من ${p.cylinders} جرة`} pct={handedPct} tone="bg-primary" />
+          <Progress label={`انقبض ${formatMoney(p.collected)} من ${formatMoney(p.sale)}`} pct={paidPct} tone="bg-success" />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function Progress({ label, pct, tone }: { label: string; pct: number; tone: string }) {
+  return (
+    <div>
+      <div className="mb-1 flex justify-between gap-2 text-xs text-muted">
+        <span>{label}</span>
+        <span className="tabular-nums">{pct}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
+        <div className={cn("h-full rounded-full", tone)} style={{ width: `${Math.min(100, pct)}%` }} />
+      </div>
     </div>
   );
 }

@@ -182,7 +182,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
             <Num label="خطأ" value={data.summary.error} tone={data.summary.error ? "text-danger" : undefined} />
           </div>
           <div className="mt-3">
-            <PriceEditor statementId={id} price={due.price} currency={settings.currencySymbol} cylinders={due.cylinders} total={due.total} editable={pending} />
+            <PriceEditor statementId={id} price={due.price} cost={st.costPrice?.toFixed(2) ?? null} currency={settings.currencySymbol} cylinders={due.cylinders} total={due.total} editable={pending} costEditable={pending || st.status === "APPROVED"} />
           </div>
           <p className="mt-3 text-sm text-muted">
             {st.cycle ? st.cycle.name : "لم تُحدد الدورة"}
