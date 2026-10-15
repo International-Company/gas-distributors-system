@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileUp, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { FileUp, Loader2, RefreshCw } from "lucide-react";
 import { Alert, Field, Input, cn } from "@/components/ui";
 import { ApiError } from "@/components/api-client";
 
@@ -13,14 +14,14 @@ type ActiveCycle = { name: string; unitPrice: string; currencySymbol: string } |
  * العنوان ورقم الميزان يُقرآن من رأس الكشف، والتحديث لكشف سابق يُكتشف تلقائيًا من رقم الميزان.
  * الدورة تُدار تلقائيًا: إن لم توجد دورة نشطة يُطلب سعر الجرة مرة واحدة.
  */
-export function UploadForm({ activeCycle }: { activeCycle: ActiveCycle }) {
+export function UploadForm({ activeCycle, replace }: { activeCycle: ActiveCycle; replace?: { id: string; title: string } | null }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [price, setPrice] = useState("");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [drag, setDrag] = useState(false);
-  const needPrice = !activeCycle;
+  const needPrice = !activeCycle && !replace;
   const ready = !needPrice || /^\d+([.,٫]\d{1,2})?$/.test(price.trim());
 
   const upload = async (file: File | undefined) => {
@@ -38,6 +39,7 @@ export function UploadForm({ activeCycle }: { activeCycle: ActiveCycle }) {
       setBusy("جاري رفع الكشف وقراءته…");
       const form = new FormData();
       form.set("file", file);
+      if (replace) form.set("supersedesId", replace.id);
       const res = await fetch("/api/v1/statements", { method: "POST", body: form });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new ApiError(json?.error?.code ?? "INTERNAL", json?.error?.message ?? "تعذر رفع الملف");
@@ -52,6 +54,12 @@ export function UploadForm({ activeCycle }: { activeCycle: ActiveCycle }) {
   return (
     <div className="space-y-3">
       {error && <Alert tone="danger">{error}</Alert>}
+      {replace && (
+        <Alert className="flex flex-wrap items-center justify-between gap-2">
+          <span><RefreshCw className="me-1 inline size-4" />تبديل «{replace.title}»: ارفع الكشف الجديد، وراح تشوف الفروق قبل ما تعتمده.</span>
+          <Link href="/d/statements" className="text-sm underline">إلغاء التبديل</Link>
+        </Alert>
+      )}
       {needPrice && (
         <Field label="سعر الجرة على المواطن (حسب الهيئة)" htmlFor="u-price" hint="مرة واحدة فقط؛ يُحسب منه المطلوب من كل شخص إن لم يذكره الكشف">
           <Input id="u-price" dir="ltr" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} className="w-40 text-center" />
@@ -69,7 +77,7 @@ export function UploadForm({ activeCycle }: { activeCycle: ActiveCycle }) {
         )}
       >
         {busy ? <Loader2 className="size-10 animate-spin text-primary" /> : <FileUp className="size-10 text-primary" />}
-        <span className="text-base font-semibold">{busy || "اسحب ملف كشف الهيئة هون، أو اضغط لاختياره"}</span>
+        <span className="text-base font-semibold">{busy || (replace ? "اسحب الكشف الجديد هون، أو اضغط لاختياره" : "اسحب ملف كشف الهيئة هون، أو اضغط لاختياره")}</span>
         {!busy && (
           <span className="text-xs text-muted">
             PDF أو Excel · {activeCycle ? <>يُضاف إلى {activeCycle.name} بسعر <bdi dir="ltr">{activeCycle.unitPrice} {activeCycle.currencySymbol}</bdi></> : "اكتب سعر الجرة أولًا"}

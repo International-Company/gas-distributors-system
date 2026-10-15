@@ -666,3 +666,70 @@ export async function approveStatement(actor: Actor, statementId: string, input:
     throw e;
   });
 }
+
+// ---------------------------------------------------------------------------
+// حذف كشف معتمد (سحبه)
+// ---------------------------------------------------------------------------
+
+/** عدد الأشخاص في كل كشف ممن عليهم أثر فعلي: تسليم، أو قبض، أو جرار مسجّلة. */
+export async function statementActivity(actor: Actor, statementIds: string[]) {
+  assertDistributor(actor);
+  if (!statementIds.length) return new Map<string, number>();
+  return withTenant(actor.distributorId, async (tx) => {
+    const rows = await tx.$queryRaw<{ statementId: string; n: bigint }[]>`
+      SELECT e."statementId", count(*) AS n FROM "entitlements" e
+      WHERE e."statementId" = ANY(${statementIds}::uuid[]) AND e."status" = 'ACTIVE' AND (
+        EXISTS (SELECT 1 FROM "payments" p WHERE p."entitlementId" = e."id" AND p."status" = 'ACTIVE')
+        OR EXISTS (SELECT 1 FROM "handovers" h WHERE h."entitlementId" = e."id" AND h."status" = 'ACTIVE')
+        OR EXISTS (SELECT 1 FROM "cylinders" z WHERE z."entitlementId" = e."id" AND z."status" <> 'VOID')
+      ) GROUP BY 1`;
+    return new Map(rows.map((r) => [r.statementId, Number(r.n)]));
+  });
+}
+
+/**
+ * حذف كشف معتمد اعتُمد بالخطأ: يُعلَّم «ملغى» مع السبب، ويُزال ناسه من الاستحقاقات (يبقى كل ذلك في السجل).
+ * يُرفض إن كان لأي شخص فيه تسليم أو قبض أو جرار (الحل: «تبديل» بكشف جديد)، أو كان تحديثًا لكشف سابق،
+ * أو له تحديث بانتظار الاعتماد.
+ */
+export async function withdrawStatement(actor: Actor, statementId: string, input: unknown) {
+  assertDistributor(actor);
+  const { reason } = z.object({ reason: z.string().trim().min(3, "يرجى كتابة السبب").max(500) }).parse(input);
+  return withTenant(actor.distributorId, async (tx) => {
+    const st = await lockStatement(tx, statementId);
+    if (st.status !== "APPROVED") throw new AppError("INVALID_STATE", "يمكن حذف كشف معتمد فقط؛ الكشف بانتظار الاعتماد يُلغى من صفحته");
+    if (st.supersedesId) throw new AppError("INVALID_STATE", "هذا الكشف تحديث لكشف سابق؛ استخدم «تبديل» لرفع نسخة صحيحة بدلًا من حذفه");
+    if (await tx.statement.count({ where: { supersedesId: st.id, status: "PENDING_REVIEW" } })) {
+      throw new AppError("INVALID_STATE", "عندك تحديث لهذا الكشف بانتظار الاعتماد؛ احذف التحديث أولًا");
+    }
+    const ents = await tx.entitlement.findMany({ where: { statementId: st.id, status: "ACTIVE" }, select: { id: true } });
+    const ids = ents.map((e) => e.id);
+    const busy = ids.length
+      ? await tx.entitlement.count({
+          where: {
+            id: { in: ids },
+            OR: [
+              { payments: { some: { status: "ACTIVE" } } },
+              { handovers: { some: { status: "ACTIVE" } } },
+              { cylinders: { some: { status: { not: "VOID" } } } },
+            ],
+          },
+        })
+      : 0;
+    if (busy) {
+      throw new AppError("INVALID_STATE", `لا يمكن حذف الكشف: فيه ${busy} شخص استلموا أو دفعوا. بدّله بكشف جديد بدلًا من حذفه، فيبقى سجلهم محفوظًا`);
+    }
+    if (ids.length) {
+      await tx.entitlement.updateMany({ where: { id: { in: ids } }, data: { status: "REMOVED" } });
+      await tx.entitlementChange.createMany({
+        data: ids.map((id) => ({
+          distributorId: actor.distributorId, entitlementId: id, source: "STATEMENT_WITHDRAWN", statementId: st.id,
+          before: { status: "ACTIVE" }, after: { status: "REMOVED" }, reason, userId: actor.userId,
+        })),
+      });
+    }
+    await tx.statement.update({ where: { id: st.id }, data: { status: "DISCARDED", discardedAt: new Date(), discardedById: actor.userId, discardReason: reason } });
+    await log(tx, actor, "withdraw", st.id, { status: "DISCARDED", removed: ids.length }, { status: "APPROVED" }, reason);
+    return { removed: ids.length };
+  });
+}

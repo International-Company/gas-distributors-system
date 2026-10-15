@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { requirePageActor } from "@/server/http/context";
-import { getStatement } from "@/server/services/statements";
+import { getStatement, statementActivity } from "@/server/services/statements";
 import { FIELD_LABELS, REQUIRED_FIELDS } from "@/server/statements/mapping";
 import { Alert, Badge, Card, DetailList, EmptyState, PageHeader, buttonClass, cn } from "@/components/ui";
 import { StatementStatusBadge } from "@/components/statement-status";
@@ -9,6 +9,7 @@ import { Pagination } from "@/components/pagination";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { ApprovePanel, MappingPanel, MetaPanel, RowActions } from "./review";
 import { OcrPanel } from "./ocr-panel";
+import { StatementActions } from "../statement-actions";
 import { STATEMENT_STEPS, Steps } from "@/components/steps";
 
 export const metadata = { title: "مراجعة كشف" };
@@ -37,6 +38,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
   if (defaultErrors) data = await getStatement(actor, id, { severity: "ERROR", page: sp.page });
   const severity = sp.severity ?? (defaultErrors ? "ERROR" : "");
   const ex = (st.extraction ?? {}) as Extraction;
+  const activity = st.status === "APPROVED" ? (await statementActivity(actor, [st.id])).get(st.id) ?? 0 : 0;
   const mapping = (st.columnMapping ?? {}) as Record<string, number | null>;
   const mappingBroken = pending && data.preview.length > 0 && REQUIRED_FIELDS.some((f) => mapping[f] == null);
   const people = data.summary.ok + data.summary.warning + data.summary.error;
@@ -139,7 +141,10 @@ export default async function StatementPage({ params, searchParams }: { params: 
       {st.status === "APPROVED" && (
         <Alert tone="success" className="flex flex-wrap items-center justify-between gap-2">
           <span>الكشف معتمد. افتحه لتسليم الناس والقبض منهم.</span>
-          <Link href={`/d/sheet?s=${st.id}`} className={buttonClass("primary", "sm")}>افتح الكشف</Link>
+          <span className="flex items-center gap-1">
+            <StatementActions id={st.id} title={st.title} status="APPROVED" people={data.summary.ok + data.summary.warning + data.summary.error} activity={activity} isUpdate={Boolean(st.supersedesId)} />
+            <Link href={`/d/sheet?s=${st.id}`} className={buttonClass("primary", "sm")}>افتح الكشف</Link>
+          </span>
         </Alert>
       )}
 
