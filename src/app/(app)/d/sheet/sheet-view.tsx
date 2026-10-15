@@ -45,7 +45,9 @@ export function SheetView() {
   const [source, setSource] = useState<Source>({ kind: "server" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(() =>
+    params.get("approved") ? { tone: "success", text: "اعتُمد الكشف وصار جاهزًا: ابحث عن الشخص واضغط «سلّم» أو «دفع»." } : null,
+  );
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [limit, setLimit] = useState(PAGE);

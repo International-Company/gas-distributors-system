@@ -104,15 +104,14 @@ try {
   await page.waitForURL("**/d/statements");
   await page.fill("#u-price", "25");
   await page.setInputFiles("#u-file", xlsx);
-  await page.click("text=رفع واستخراج البيانات");
   await page.waitForURL(/\/d\/statements\/[0-9a-f-]+$/, { timeout: 30000 });
   check("الدورة أُنشئت تلقائيًا وانتقل للمراجعة (الخطوة 2)", (await page.locator("[aria-current=step]").textContent()).includes("راجع البيانات"));
-  await page.getByText("راجعت بيانات الكشف").click();
-  await page.getByRole("button", { name: "اعتماد الكشف" }).click();
-  await page.getByRole("link", { name: "افتح الكشف" }).waitFor({ timeout: 30000 });
-  await page.getByRole("link", { name: "افتح الكشف" }).click();
-  await page.waitForURL(/\/d\/sheet\?s=/);
+  check("الكشف السليم: زر اعتماد واحد بعدد الناس", (await page.getByRole("button", { name: "اعتمد الكشف (3 شخص)" }).count()) === 1);
+  await page.screenshot({ path: `${OUT}/s-00-review.png`, fullPage: true });
+  await page.getByRole("button", { name: /اعتمد الكشف/ }).click();
+  await page.waitForURL(/\/d\/sheet/, { timeout: 30000 });
   await page.locator("[data-row]").first().waitFor();
+  check("بعد الاعتماد: انتقال مباشر إلى «الكشف» مع رسالة", page.url().includes("approved=1") && (await page.getByText("اعتُمد الكشف وصار جاهزًا").count()) === 1);
 
   const order = await page.locator("[data-row] bdi[dir=ltr]").evaluateAll((els) => els.filter((e) => /^\d+-\d+$/.test(e.textContent ?? "")).map((e) => e.textContent));
   check("ناس الكشف بترتيب عددي (40-1، 40-2، 40-10)", JSON.stringify(order) === JSON.stringify(["40-1", "40-2", "40-10"]), JSON.stringify(order));
@@ -217,6 +216,16 @@ try {
   const fin = await body();
   check("الفلوس: المقبوض 35 والمصاريف 30 والرصيد 5", fin.includes("35.00") && fin.includes("30.00") && fin.includes("5.00") && !fin.includes("دفعات المحطات"));
   await page.screenshot({ path: `${OUT}/s-04-money.png`, fullPage: true });
+
+  // ذكاء الرفع: الكشف نفسه (نفس رقم الميزان) يُعتبر تحديثًا تلقائيًا ويظهر الفرق
+  await page.goto(BASE + "/d/statements");
+  check("صفحة الكشوفات: مربع رفع واحد والكشف المعتمد مع «افتح الكشف»", (await page.getByText("اسحب ملف كشف الهيئة").count()) === 1 && (await page.getByRole("link", { name: "افتح الكشف" }).count()) === 1);
+  await page.screenshot({ path: `${OUT}/s-06-statements.png`, fullPage: true });
+  await page.setInputFiles("#u-file", xlsx);
+  await page.waitForURL(/\/d\/statements\/[0-9a-f-]+$/, { timeout: 30000 });
+  const upd = await body();
+  check("رفع الكشف نفسه يُكتشف تحديثًا (نفس رقم الميزان) مع الفروق", upd.includes("اعتُبر تحديثًا لكشف") && upd.includes("تحديث لكشف") && upd.includes("+0 جدد"));
+  await page.screenshot({ path: `${OUT}/s-07-update.png`, fullPage: true });
 
   const m = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, storageState: await ctx.storageState() });
   const mp = await m.newPage();

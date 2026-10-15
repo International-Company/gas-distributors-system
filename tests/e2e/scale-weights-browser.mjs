@@ -73,14 +73,12 @@ await page.waitForURL(/\/d\/cycles\/[0-9a-f-]+$/);
 
 await page.goto(BASE + "/d/statements");
 await page.setInputFiles("#u-file", xlsx);
-await page.click("text=رفع واستخراج البيانات");
 await page.waitForURL(/\/d\/statements\/[0-9a-f-]+$/, { timeout: 30000 });
 check("رقم الميزان قُرئ من رأس الكشف", (await page.inputValue("#m-scale")) === "295");
 check("رقم المواطن «الميزان-المتسلسل» في الصفوف", (await body()).includes("295-11"));
 await page.screenshot({ path: `${OUT}/sw-01-review.png`, fullPage: true });
-await page.getByText("راجعت بيانات الكشف").click();
-await page.getByRole("button", { name: "اعتماد الكشف" }).click();
-await page.getByText("معتمد", { exact: true }).first().waitFor({ timeout: 30000 });
+await page.getByRole("button", { name: /اعتمد الكشف/ }).click();
+await page.waitForURL(/\/d\/sheet/, { timeout: 30000 });
 
 // الشباك: استلام بوزن الفارغة
 await page.goto(BASE + "/d/counter");

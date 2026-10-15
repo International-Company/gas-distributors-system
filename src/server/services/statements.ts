@@ -209,6 +209,11 @@ export async function uploadStatement(actor: Actor, file: { name: string; mime: 
     if (ex.table.length && missing.length) notes.push("تعذر تحديد بعض الأعمدة تلقائيًا؛ حددها يدويًا في شاشة المراجعة");
 
     const meta = extractStatementMeta(ex.text.slice(0, 2000));
+    // كشف بنفس رقم ميزان كشف معتمد في الدورة النشطة هو تحديث له تلقائيًا (يمكن التراجع عن ذلك في المراجعة).
+    if (!supersedes && meta.scaleNumber && active) {
+      supersedes = await tx.statement.findFirst({ where: { status: "APPROVED", cycleId: active.id, scaleNumber: meta.scaleNumber }, orderBy: { approvedAt: "desc" } });
+      if (supersedes) notes.push(`اعتُبر تحديثًا لكشف «${supersedes.title}» لأنه بنفس رقم الميزان (${meta.scaleNumber}). راجع الفروق قبل الاعتماد، أو اختر «كشف مستقل» من الإعدادات.`);
+    }
     // تحديث كشف سابق يُبقي رقم ميزانه، فلا تتغير أرقام المواطنين المكتوبة على الجرار.
     const scaleNumber = supersedes ? supersedes.scaleNumber : meta.scaleNumber;
     const autoTitle = meta.date || meta.scaleNumber

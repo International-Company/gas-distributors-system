@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ScanText } from "lucide-react";
 import { Alert, Button, Card } from "@/components/ui";
 import { useApi } from "@/components/api-client";
 
-export function OcrPanel({ statementId }: { statementId: string }) {
+/** القراءة الضوئية في المتصفح؛ تبدأ تلقائيًا عند فتح كشف ممسوح ضوئيًا. */
+export function OcrPanel({ statementId, autoStart }: { statementId: string; autoStart?: boolean }) {
   const api = useApi();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -36,6 +37,14 @@ export function OcrPanel({ statementId }: { statementId: string }) {
       setBusy(false);
     }
   };
+
+  const started = useRef(false);
+  useEffect(() => {
+    if (autoStart && !started.current) {
+      started.current = true;
+      void run();
+    }
+  }, [autoStart]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Card title="قراءة ضوئية مطلوبة">

@@ -236,51 +236,42 @@ export function RowActions({ statementId, row }: { statementId: string; row: Row
 // الاعتماد والإلغاء
 // ---------------------------------------------------------------------------
 
+/** الاعتماد بضغطة واحدة صريحة، ثم الانتقال مباشرة إلى «الكشف» للعمل عليه. */
 export function ApprovePanel({
-  statementId, canApprove, summary, cycleName, cycleOpen,
+  statementId, canApprove, count, warnings, cycleName, cycleOpen,
 }: {
   statementId: string;
   canApprove: boolean;
-  summary: { ok: number; warning: number; error: number; excluded: number };
+  count: number;
+  warnings: number;
   cycleName: string | null;
   cycleOpen: boolean;
 }) {
   const api = useApi();
   const router = useRouter();
-  const [confirm, setConfirm] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [reason, setReason] = useState("");
-  const [result, setResult] = useState<Record<string, number> | null>(null);
   const approve = useFormSubmit(
     () => api<Record<string, number>>("POST", `/api/v1/statements/${statementId}/approve`, { confirm: true }),
-    (r) => {
-      setResult(r);
-      router.refresh();
-    },
+    () => router.push(`/d/sheet?s=${statementId}&approved=1`),
   );
   const discard = useFormSubmit(
     () => api("POST", `/api/v1/statements/${statementId}/discard`, { reason }),
     () => router.push("/d/statements"),
   );
   return (
-    <Card title="الاعتماد">
+    <div className="rounded-xl border border-success/30 bg-success-soft p-4">
       <div className="space-y-3">
         {approve.error && <Alert tone="danger">{approve.error}</Alert>}
-        {result && <Alert tone="success">تم الاعتماد: {result.created} استحقاق جديد، {result.updated} محدّث، {result.removed} أُزيل، {result.newCitizens} مواطن جديد.</Alert>}
-        <ul className="text-sm text-muted">
-          <li>سيُعتمد {summary.ok + summary.warning} صف في {cycleName ? `«${cycleName}»` : "— لم تُحدد الدورة"}.</li>
-          {summary.warning > 0 && <li className="text-warning">{summary.warning} صف به تنبيهات؛ راجعها قبل الاعتماد.</li>}
-          {summary.error > 0 && <li className="text-danger">{summary.error} صف به أخطاء: صححها أو استبعدها أولًا.</li>}
-          {summary.excluded > 0 && <li>{summary.excluded} صف مستبعد لن يُعتمد.</li>}
-          {cycleName && !cycleOpen && <li className="text-danger">الدورة مغلقة؛ لا يمكن الاعتماد فيها.</li>}
-        </ul>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" className="size-4" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} disabled={!canApprove} />
-          راجعت بيانات الكشف وأؤكد اعتماده. بعد الاعتماد يُستخدم في عمليات الاستحقاق.
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <Button disabled={!canApprove || !confirm} loading={approve.busy} onClick={() => approve.submit()}>اعتماد الكشف</Button>
-          <Button variant="secondary" onClick={() => setDiscardOpen(true)}>إلغاء الكشف</Button>
+        <p className="text-sm">
+          {canApprove ? <>الكشف جاهز ✓ — راح ينضاف <strong>{count}</strong> شخص إلى {cycleName ? `«${cycleName}»` : "الدورة"}.</> : !cycleName ? "اختر الدورة من «تفاصيل وإعدادات» أولًا." : !cycleOpen ? "الدورة مغلقة؛ لا يمكن الاعتماد فيها." : "ما في صفوف للاعتماد."}
+          {warnings > 0 && <span className="text-warning"> فيه {warnings} تنبيه (مثل حروف ناقصة في الأسماء)، ما بتمنع الاعتماد.</span>}
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button size="md" className="px-6" disabled={!canApprove} loading={approve.busy} onClick={() => approve.submit()}>
+            اعتمد الكشف ({count} شخص)
+          </Button>
+          <button type="button" className="text-sm text-muted hover:text-danger hover:underline" onClick={() => setDiscardOpen(true)}>إلغاء الكشف</button>
         </div>
       </div>
       {discardOpen && (
@@ -296,6 +287,6 @@ export function ApprovePanel({
           </form>
         </Modal>
       )}
-    </Card>
+    </div>
   );
 }

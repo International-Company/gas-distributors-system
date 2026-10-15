@@ -90,26 +90,21 @@ check("بدء دورة", await page.getByText("نشطة").first().isVisible());
 // رفع الكشف
 await page.goto(BASE + "/d/statements");
 await page.setInputFiles("#u-file", xlsxPath);
-await page.click("text=رفع واستخراج البيانات");
 await page.waitForURL(/\/d\/statements\/[0-9a-f-]+$/, { timeout: 30000 });
 const stmtUrl = page.url();
-await page.waitForSelector("text=صفوف الكشف");
+await page.waitForSelector("text=الناس في الكشف");
 check("الكشف بانتظار الاعتماد", await page.getByText("بانتظار الاعتماد").first().isVisible());
-check("الدورة المقترحة من الملف = 3", await page.getByText("الدورة 3").first().isVisible());
 check("صف الهوية الخاطئة معلّم", await page.getByText("رقم الهوية غير صالح").first().isVisible());
 await page.screenshot({ path: `${OUT}/p2-01-review.png`, fullPage: true });
-check("زر الاعتماد معطل مع وجود أخطاء", await page.getByRole("button", { name: "اعتماد الكشف" }).isDisabled());
+check("مع وجود أخطاء: تظهر الصفوف الخاطئة للتصحيح ولا زر اعتماد", (await page.getByRole("button", { name: /اعتمد الكشف/ }).count()) === 0 && (await page.getByText(/صحّح 1 صف/).count()) === 1);
 
 // استبعاد الصف الخاطئ ثم الاعتماد
-await page.click("text=أخطاء (1)");
-await page.waitForURL(/severity=ERROR/);
 await page.getByRole("button", { name: "استبعاد" }).first().click();
 await page.waitForTimeout(1500);
 await page.goto(stmtUrl);
-await page.getByText("راجعت بيانات الكشف").click();
-await page.getByRole("button", { name: "اعتماد الكشف" }).click();
-await page.waitForSelector("text=تم الاعتماد", { timeout: 30000 }).catch(() => {});
-await page.reload();
+await page.getByRole("button", { name: /اعتمد الكشف/ }).click();
+await page.waitForURL(/\/d\/sheet/, { timeout: 30000 });
+await page.goto(stmtUrl);
 check("الكشف معتمد", await page.getByText("معتمد", { exact: true }).first().isVisible());
 await page.screenshot({ path: `${OUT}/p2-02-approved.png`, fullPage: true });
 
@@ -162,11 +157,10 @@ const pdfPath = `${OUT}/scanned.pdf`;
 writeFileSync(pdfPath, await pdf.save());
 await page.goto(BASE + "/d/statements");
 await page.setInputFiles("#u-file", pdfPath);
-await page.click("text=رفع واستخراج البيانات");
 await page.waitForURL(/\/d\/statements\/[0-9a-f-]+$/, { timeout: 30000 });
 check("اكتشاف الملف الممسوح ضوئيًا", await page.getByText("قراءة ضوئية مطلوبة").isVisible());
-await page.getByRole("button", { name: "بدء القراءة الضوئية" }).click();
-await page.waitForSelector("text=مقروء ضوئيًا: تحقق من القيم", { timeout: 240000 }).catch(() => {});
+// القراءة الضوئية تبدأ تلقائيًا
+await page.waitForFunction(() => (document.body.textContent ?? "").includes("مقروء ضوئيًا: تحقق من القيم"), null, { timeout: 240000 }).catch(() => {});
 const body = await page.textContent("body");
 check("القراءة الضوئية أنتجت صفوفًا", body.includes("مقروء ضوئيًا: تحقق من القيم"));
 check("الهوية الأولى مقروءة", body.includes(sid[0]), "");

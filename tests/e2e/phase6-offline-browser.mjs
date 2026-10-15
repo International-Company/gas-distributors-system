@@ -99,11 +99,9 @@ try {
   await page.waitForURL(/\/d\/cycles\/[0-9a-f-]+$/);
   await page.goto(BASE + "/d/statements");
   await page.setInputFiles("#u-file", xlsx);
-  await page.click("text=رفع واستخراج البيانات");
   await page.waitForURL(/\/d\/statements\/[0-9a-f-]+$/, { timeout: 30000 });
-  await page.getByText("راجعت بيانات الكشف").click();
-  await page.getByRole("button", { name: "اعتماد الكشف" }).click();
-  await page.getByText("معتمد", { exact: true }).first().waitFor({ timeout: 30000 });
+  await page.getByRole("button", { name: /اعتمد الكشف/ }).click();
+  await page.waitForURL(/\/d\/sheet/, { timeout: 30000 });
 
   // جهاز ثانٍ (جلسة مستقلة للحساب نفسه) يستلم ويعبئ جرتي A و B.
   const dev2 = new Map();
